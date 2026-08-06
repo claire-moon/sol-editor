@@ -2,6 +2,13 @@
 set -euo pipefail
 
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+if [[ -f $root/.sol-env ]]; then
+    set -a
+    # shellcheck disable=SC1091
+    source "$root/.sol-env"
+    set +a
+fi
+
 map_name=${1:-E1M1}
 if [[ $# -gt 0 ]]; then
     shift
@@ -9,15 +16,11 @@ fi
 
 content_package=$(bash "$root/tools/sol-build.sh")
 
-if [[ -n ${SOL_ENGINE:-} ]]; then
-    engine=$SOL_ENGINE
-elif command -v uzdoom >/dev/null 2>&1; then
-    engine=$(command -v uzdoom)
-else
-    printf 'SOL engine not found. Set SOL_ENGINE=/path/to/uzdoom.\n' >&2
+if [[ -z ${SOL_ENGINE:-} ]]; then
+    printf 'SOL_ENGINE is not configured. Run tools/sol-init-workspace.sh first.\n' >&2
     exit 1
 fi
-
+engine=$SOL_ENGINE
 if [[ ! -x $engine ]]; then
     printf 'SOL_ENGINE is not executable: %s\n' "$engine" >&2
     exit 1

@@ -5,7 +5,7 @@
 Committed review artifacts:
 
 - `e1m1/stats.json` records structural and encounter budgets.
-- `e1m1/layout.svg` documents the connected zone sequence.
+- `e1m1/layout.svg` documents the zone sequence from Arrival Lock through Exit Control.
 
 Generate and validate:
 
@@ -14,5 +14,7 @@ python3 tools/sol-generate-e1m1.py --output build/sol/generated/e1m1
 python3 tools/sol-validate-e1m1.py --directory build/sol/generated/e1m1
 bash tools/sol-build.sh
 ```
+
+E1M1 ends through a normal Doom exit. Episode statistics and the Episode 1 world map are controlled by `sol-engine` MAPINFO rather than by an attached-map transition.
 
 The generated WAD contains geometry and references to IWAD texture names. It contains no copied commercial textures, sounds, sprites, music, or other IWAD lumps.

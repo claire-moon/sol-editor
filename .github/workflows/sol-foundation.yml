@@ -7,22 +7,26 @@ on:
       - 'sol/**'
       - 'sol-project/**'
       - 'tools/sol-*'
+      - 'tests/**'
       - 'docs/sol/**'
       - 'branding/sol/**'
       - 'Source/Core/Resources/UDB2.ico'
       - 'SOL.md'
       - 'ROADMAP.md'
+      - '.gitignore'
       - '.github/workflows/sol-foundation.yml'
   pull_request:
     paths:
       - 'sol/**'
       - 'sol-project/**'
       - 'tools/sol-*'
+      - 'tests/**'
       - 'docs/sol/**'
       - 'branding/sol/**'
       - 'Source/Core/Resources/UDB2.ico'
       - 'SOL.md'
       - 'ROADMAP.md'
+      - '.gitignore'
       - '.github/workflows/sol-foundation.yml'
 
 permissions:
@@ -37,8 +41,10 @@ jobs:
         run: |
           python3 -m json.tool sol/version.json >/dev/null
           python3 -m json.tool sol-project/project.json >/dev/null
-          bash -n tools/sol-*.sh
+          bash -n tools/sol-*.sh tests/*.sh
           python3 -m py_compile tools/sol-generate-e1m1.py tools/sol-validate-e1m1.py
+      - name: Verify workspace initializer
+        run: bash tests/test-sol-init-workspace.sh
       - name: Verify generated map
         run: |
           mkdir -p build/sol/generated/e1m1
@@ -46,6 +52,7 @@ jobs:
           python3 tools/sol-validate-e1m1.py --directory build/sol/generated/e1m1
           cmp build/sol/generated/e1m1/stats.json sol-project/maps/e1m1/stats.json
           cmp build/sol/generated/e1m1/layout.svg sol-project/maps/e1m1/layout.svg
+          ! grep -R -F 'Transition Seam' tools/sol-generate-e1m1.py sol-project/maps/e1m1/layout.svg
       - name: Verify pinned DoomTools revision
         run: bash tools/sol-bootstrap-doomtools.sh --verify-only
       - name: Build graybox package
