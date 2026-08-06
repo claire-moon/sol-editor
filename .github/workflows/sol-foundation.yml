@@ -1,0 +1,53 @@
+name: SOL foundation
+
+on:
+  push:
+    branches:
+      - master
+      - 'sol/**'
+    paths:
+      - 'sol/**'
+      - 'sol-project/**'
+      - 'tools/sol-*.sh'
+      - 'docs/sol/**'
+      - 'branding/sol/**'
+      - 'SOL.md'
+      - 'ROADMAP.md'
+      - '.github/workflows/sol-foundation.yml'
+  pull_request:
+    paths:
+      - 'sol/**'
+      - 'sol-project/**'
+      - 'tools/sol-*.sh'
+      - 'docs/sol/**'
+      - 'branding/sol/**'
+      - 'SOL.md'
+      - 'ROADMAP.md'
+      - '.github/workflows/sol-foundation.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate metadata
+        run: |
+          python3 -m json.tool sol/version.json >/dev/null
+          python3 -m json.tool sol-project/project.json >/dev/null
+      - name: Validate shell scripts
+        run: bash -n tools/sol-*.sh
+      - name: Verify pinned DoomTools revision
+        run: bash tools/sol-bootstrap-doomtools.sh --verify-only
+      - name: Build foundation package
+        env:
+          SOL_SKIP_DOOMTOOLS: '1'
+        run: bash tools/sol-build.sh
+      - name: Inspect package
+        run: |
+          archive=$(find build/sol -maxdepth 1 -name 'sol-e1m1-v*.pk3' -print -quit)
+          test -n "$archive"
+          unzip -t "$archive"
+          unzip -Z1 "$archive" | grep -Fx SOLINFO

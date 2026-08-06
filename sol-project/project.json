@@ -1,0 +1,11 @@
+{
+  "name": "SOL E1M1 Vertical Slice",
+  "version": "0.0.1-dev",
+  "mapFormat": "UDMF",
+  "primaryMap": "E1M1",
+  "runtimeRepository": "claire-moon/sol-engine",
+  "runtimePackageEnvironment": "SOL_RUNTIME_PKG",
+  "engineEnvironment": "SOL_ENGINE",
+  "iwadEnvironment": "DOOM_IWAD",
+  "output": "build/sol/sol-e1m1-v0.0.1-dev.pk3"
+}
