@@ -1,11 +1,11 @@
 {
-  "name": "SOL E1M1 Vertical Slice",
-  "version": "0.0.1-dev",
-  "mapFormat": "UDMF",
-  "primaryMap": "E1M1",
-  "runtimeRepository": "claire-moon/sol-engine",
-  "runtimePackageEnvironment": "SOL_RUNTIME_PKG",
-  "engineEnvironment": "SOL_ENGINE",
-  "iwadEnvironment": "DOOM_IWAD",
-  "output": "build/sol/sol-e1m1-v0.0.1-dev.pk3"
+  "name": "SOL",
+  "version": "0.1.0-dev",
+  "map": "E1M1",
+  "format": "UDMF",
+  "namespace": "ZDoom",
+  "source": "tools/sol-generate-e1m1.py",
+  "artifact": "build/sol/generated/e1m1/E1M1.wad",
+  "engine_package": "sol-e1m1-v0.1.0-dev.pk3",
+  "monster_profile": "standard-graybox"
 }

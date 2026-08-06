@@ -1,0 +1,10 @@
+{
+  "linedefs": 43,
+  "map": "E1M1",
+  "monsters": 176,
+  "sectors": 14,
+  "sidedefs": 56,
+  "things": 193,
+  "version": "0.1.0-dev",
+  "vertices": 30
+}

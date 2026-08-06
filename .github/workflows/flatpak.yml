@@ -22,7 +22,7 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           submodules: recursive
           fetch-depth: 0 # Required to properly get the commit count
@@ -44,7 +44,7 @@ jobs:
         run: |
           COUNT=$(git rev-list --count HEAD)
           echo "REV_COUNT=$COUNT" >> $GITHUB_ENV
-          echo "Detected Revision: $COUNT"     
+          echo "Detected Revision: $COUNT"
 
       - name: Build Flatpak
         uses: flatpak/flatpak-github-actions/flatpak-builder@v6
@@ -54,7 +54,7 @@ jobs:
           run-tests: false
           cache: true
           restore-cache: true
-          cache-key: flatpak-builder-${{ hashFiles('flatpak/io.github.ultimatedoombuilder.ultimatedoombuilder.yml') }}          
+          cache-key: flatpak-builder-${{ hashFiles('flatpak/io.github.ultimatedoombuilder.ultimatedoombuilder.yml') }}
           upload-artifact: false
 
       - name: Upload Artifact
@@ -77,4 +77,3 @@ jobs:
           prerelease: false
           make_latest: true
           overwrite_files: true
-      

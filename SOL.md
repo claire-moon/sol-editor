@@ -1,38 +1,31 @@
 # SOL Editor
 
-`sol-editor` is the SOL content-development fork based on Ultimate Doom Builder. It coordinates map authoring, DoomTools-based project automation, validation, packaging, and test launches against `sol-engine`.
+`sol-editor` is the SOL content-development fork based on Ultimate Doom Builder. It coordinates map authoring, DoomTools automation, validation, packaging, and test launches against `sol-engine`.
 
-## Responsibilities
+## Current release
 
-- Author and validate SOL maps in UDMF.
-- Pin and bootstrap a shared DoomTools revision.
-- Build content packages without committing commercial IWAD data.
-- Launch development maps against a selected SOL engine binary.
-- Provide transition-anchor, encounter, story-event, and performance tooling.
-
-## v0.0.1 quick start
+`v0.1.0-dev` contains the generated E1M1 graybox, shared branding, reproducible packaging, and repaired inherited CI.
 
 ```bash
-bash tools/sol-bootstrap-doomtools.sh
+python3 tools/sol-generate-e1m1.py --output build/sol/generated/e1m1
+python3 tools/sol-validate-e1m1.py --directory build/sol/generated/e1m1
 bash tools/sol-build.sh
-SOL_ENGINE=/path/to/uzdoom DOOM_IWAD=/path/to/doom.wad \
-  bash tools/sol-test.sh E1M1
+SOL_ENGINE=/path/to/sol-engine DOOM_IWAD=/path/to/doom.wad bash tools/sol-test.sh E1M1
 ```
 
-Build Ultimate Doom Builder itself using the existing upstream build process:
+Build the editor itself with the existing upstream build process:
 
 ```bash
-make
+make linux
 ```
 
 ## Repository layout
 
 - `Source/`, `Builder.sln`, and related files: inherited editor source.
-- `sol-project/`: SOL map and resource workspace.
-- `tools/sol-*`: collaboration bootstrap, build, and launch commands.
-- `docs/sol/`: release plans and authoring contracts.
+- `tools/sol-generate-e1m1.py`: E1M1 UDMF source generator.
+- `sol-project/maps/e1m1/`: map budget and layout review artifacts.
+- `tools/sol-*`: generation, validation, build, and launch commands.
+- `docs/sol/`: release and authoring contracts.
 - `branding/sol/`: approved SOL application identity assets.
 
-## Content policy
-
-Do not commit Doom, Doom II, or other commercial IWAD data. Local editor configuration may reference a legally obtained IWAD through environment variables or ignored user settings.
+Do not commit commercial IWAD resources. Local configuration may reference a legally obtained IWAD.

@@ -1,64 +1,53 @@
 name: Continuous Integration - Other
 
-on: [push, pull_request]
+on:
+  push:
+    branches: [master, 'sol/**']
+  pull_request:
+
+permissions:
+  contents: read
 
 jobs:
-  build:
-    name: ${{ matrix.config.name }}
-    runs-on: ${{ matrix.config.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        config:
-#        - {
-#            name: "macOS",
-#            os: macos-latest
-#          }
-        - {
-            name: "Linux",
-            os: ubuntu-latest
-          }
-
+  linux:
+    runs-on: ubuntu-22.04
     steps:
-    - uses: actions/checkout@v1
-
-    - name: Build
-      run: |
-        if [[ "${{ runner.os }}" == 'macOS' ]]; then
-          make mac
-        elif [[ "${{ runner.os }}" == 'Linux' ]]; then
+      - uses: actions/checkout@v6
+      - name: Install Mono and native dependencies
+        run: |
           sudo apt-get update
-          sudo apt install mesa-common-dev libxfixes-dev
-          make linux
-        fi
-
-    - name: Test Files Presence
-      run: |
-        FILES=( \
-          Build/Builder.exe \
-          Build/libBuilderNative.so \
-          Build/Plugins/AutomapMode.dll \
-          Build/Plugins/BuilderEffects.dll \
-          Build/Plugins/BuilderModes.dll \
-          Build/Plugins/ColorPicker.dll \
-          Build/Plugins/CommentsPanel.dll \
-          Build/Plugins/NodesViewer.dll \
-          Build/Plugins/SoundPropagationMode.dll \
-          Build/Plugins/StairSectorBuilder.dll \
-          Build/Plugins/TagExplorer.dll \
-          Build/Plugins/TagRange.dll \
-          Build/Plugins/ThreeDFloorMode.dll \
-          Build/Plugins/VisplaneExplorer.dll \
-        )
-        for filename in "${FILES[@]}"; do
-          if [ ! -f $filename ]; then
-           echo "ERROR: File $filename is missing"
-           exit 1
+          sudo apt-get install -y ca-certificates gnupg mesa-common-dev libx11-dev libxfixes-dev
+          sudo gpg --homedir /tmp --no-default-keyring \
+            --keyring gnupg-ring:/usr/share/keyrings/mono-official-archive-keyring.gpg \
+            --keyserver hkp://keyserver.ubuntu.com:80 \
+            --recv-keys 3FA7E0328081BFF6A14DA29AA6A19B38D3D831EF
+          sudo chmod +r /usr/share/keyrings/mono-official-archive-keyring.gpg
+          echo 'deb [signed-by=/usr/share/keyrings/mono-official-archive-keyring.gpg] https://download.mono-project.com/repo/ubuntu stable-focal main' | sudo tee /etc/apt/sources.list.d/mono-official-stable.list
+          sudo apt-get update
+          sudo apt-get install -y mono-complete
+          msbuild -version
+      - name: Build Linux editor
+        shell: bash
+        run: |
+          set +e
+          make linux 2>&1 | tee build-linux.log
+          status=${PIPESTATUS[0]}
+          set -e
+          if (( status != 0 )); then
+            details=$(tail -n 80 build-linux.log)
+            details=${details//'%'/'%25'}
+            details=${details//$'\r'/'%0D'}
+            details=${details//$'\n'/'%0A'}
+            printf '::error title=Linux editor build failed::%s\n' "$details"
+            exit "$status"
           fi
-        done
-
-#    - name: Upload Package
-#      uses: actions/upload-artifact@v1
-#      with:
-#        path: Build
-#        name: "UDB_${{ matrix.config.name }}"
+      - name: Verify outputs
+        run: |
+          test -f Build/Builder.exe
+          test -f Build/libBuilderNative.so
+          test -f Build/Plugins/BuilderModes.dll
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sol-editor-linux
+          path: Build
+          if-no-files-found: error
