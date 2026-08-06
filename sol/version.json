@@ -1,0 +1,20 @@
+{
+  "project": "SOL",
+  "component": "sol-editor",
+  "version": "0.0.1-dev",
+  "base": {
+    "project": "Ultimate Doom Builder",
+    "branch": "master",
+    "commit": "2f19e84cb5d79cb1cd1c4020c15b48888977dec6"
+  },
+  "doomTools": {
+    "repository": "MTrop/DoomTools",
+    "commit": "b2590d80918c02c9605c5338e31eaa98a2089e5f"
+  },
+  "engineContract": {
+    "repository": "claire-moon/sol-engine",
+    "version": "0.0.1-dev",
+    "mapFormat": "UDMF",
+    "developmentMap": "E1M1"
+  }
+}

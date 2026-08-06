@@ -18,3 +18,11 @@ bin
 /Source/Core/*.user
 /Source/Native/*.log
 /Build/builder
+
+# SOL local tools and generated content
+/.sol-tools
+/build/sol
+/sol-project/doommake-workspace
+/sol-project/*.dbs
+/sol-project/*.backup*
+/sol-project/.udb
