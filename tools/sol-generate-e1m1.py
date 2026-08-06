@@ -7,7 +7,7 @@ NAMES = [
     "Arrival Lock", "Arrival Connector", "Hangar Floor", "Security Connector",
     "Security Spine", "Maintenance Descent", "Processing / Maintenance",
     "Reactor Connector", "Reactor Annex", "Exterior Airlock", "Exterior Breach",
-    "Command Lift", "Command Return", "Transition Seam",
+    "Command Lift", "Command Return", "Exit Control",
 ]
 WIDTH = 512
 HEIGHT = 512
