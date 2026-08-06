@@ -1,70 +1,72 @@
 name: Continuous Integration - Windows
 
-on: [push, pull_request]
+on:
+  push:
+    branches: [master, 'sol/**']
+  pull_request:
+
+permissions:
+  contents: read
 
 jobs:
   build:
-    name: "Visual Studio ${{ matrix.platform }} ${{ matrix.configuration }}"
-    runs-on: windows-latest
+    name: Visual Studio ${{ matrix.platform }} ${{ matrix.configuration }}
+    runs-on: windows-2022
     strategy:
       fail-fast: false
       matrix:
         configuration: [Release, Debug]
         platform: [x64, x86]
-
     steps:
-    - uses: actions/checkout@v1
+      - uses: actions/checkout@v6
+      - name: Build
+        shell: pwsh
+        run: |
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $msbuild = & "$vswhere" -latest -requires Microsoft.Component.MSBuild -find MSBuild\**\Bin\MSBuild.exe | Select-Object -First 1
+          if (-not $msbuild) { throw "MSBuild was not found" }
+          $options = @(
+            '-property:Configuration=${{ matrix.configuration }}',
+            '-property:Platform=${{ matrix.platform }}',
+            '-maxcpucount',
+            '-verbosity:minimal'
+          )
 
-    - name: Build
-      run: |
-        $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
-        $msbuild = & "$vswhere" -latest -requires Microsoft.Component.MSBuild -find MSBuild\**\Bin\MSBuild.exe | select-object -first 1
-        $options = @( `
-          '-property:Configuration=${{ matrix.configuration }}', `
-          '-property:Platform=${{ matrix.platform }}', `
-          '-maxcpucount', `
-          '-verbosity:minimal' `
-        )
-        & $msbuild Builder.sln $options
-        if (-not $?) { throw "Build failed" }
-        & $msbuild Source\Tools\Updater\Updater.csproj $options
-        if (-not $?) { throw "Build failed" }
-
-    - name: Test Files Presence
-      run: |
-        $files = @( `
-          'Build\Builder.exe', `
-          'Build\BuilderNative.dll', `
-          'Build\Plugins\AutomapMode.dll', `
-          'Build\Plugins\BuilderEffects.dll', `
-          'Build\Plugins\BuilderModes.dll', `
-          'Build\Plugins\ColorPicker.dll', `
-          'Build\Plugins\CommentsPanel.dll', `
-          'Build\Plugins\NodesViewer.dll', `
-          'Build\Plugins\SoundPropagationMode.dll', `
-          'Build\Plugins\StairSectorBuilder.dll', `
-          'Build\Plugins\TagExplorer.dll', `
-          'Build\Plugins\TagRange.dll', `
-          'Build\Plugins\ThreeDFloorMode.dll', `
-          'Build\Plugins\VisplaneExplorer.dll', `
-          'Build\Updater.exe' `
-        )
-        foreach($file in $files)
-        {
-          if (!(Test-Path -Path $file -PathType Leaf))
-          {
-            Write-Output "ERROR: File $file is missing"
-            exit 1
+          $builderOutput = & $msbuild Builder.sln -restore $options 2>&1
+          $builderStatus = $LASTEXITCODE
+          $builderOutput | Tee-Object -FilePath builder-build.log
+          if ($builderStatus -ne 0) {
+            $details = ($builderOutput | Select-Object -Last 100 | Out-String).Trim()
+            $details = $details.Replace('%', '%25').Replace("`r", '%0D').Replace("`n", '%0A')
+            Write-Host "::error title=Builder build failed::$details"
+            exit $builderStatus
           }
-        }
 
-    - name: Prepare Package
-      run: |
-        # Delete unwanted files
-        Remove-Item Build\Setup -recurse
-
-    - name: Upload Package
-      uses: actions/upload-artifact@v1
-      with:
-        path: Build
-        name: "vs_${{ matrix.platform }}_${{ matrix.configuration }}"
+          $updaterOutput = & $msbuild Source\Tools\Updater\Updater.csproj $options 2>&1
+          $updaterStatus = $LASTEXITCODE
+          $updaterOutput | Tee-Object -FilePath updater-build.log
+          if ($updaterStatus -ne 0) {
+            $details = ($updaterOutput | Select-Object -Last 100 | Out-String).Trim()
+            $details = $details.Replace('%', '%25').Replace("`r", '%0D').Replace("`n", '%0A')
+            Write-Host "::error title=Updater build failed::$details"
+            exit $updaterStatus
+          }
+      - name: Verify outputs
+        shell: pwsh
+        run: |
+          @(
+            'Build\Builder.exe',
+            'Build\BuilderNative.dll',
+            'Build\Plugins\BuilderModes.dll',
+            'Build\Updater.exe'
+          ) | ForEach-Object {
+            if (-not (Test-Path $_ -PathType Leaf)) { throw "Missing output: $_" }
+          }
+      - name: Prepare package
+        shell: pwsh
+        run: if (Test-Path Build\Setup) { Remove-Item Build\Setup -Recurse -Force }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sol-editor-vs-${{ matrix.platform }}-${{ matrix.configuration }}
+          path: Build
+          if-no-files-found: error

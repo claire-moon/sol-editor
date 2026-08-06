@@ -1,14 +1,18 @@
-# E1M1 Map Workspace
+# SOL map sources
 
-Store the editable E1M1 UDMF map source in this directory during `v0.1.0` development.
+`tools/sol-generate-e1m1.py` is the source of truth for the first playable **Hangar: Arrival** graybox. It generates an editable UDMF PWAD, readable `TEXTMAP.txt`, statistics, and a layout overview.
 
-Required conventions:
+Committed review artifacts:
 
-- Map name: `E1M1`.
-- Format: UDMF using the UZDoom/GZDoom namespace selected by the project configuration.
-- Do not embed commercial IWAD textures, flats, sprites, sounds, or music.
-- Use stable IDs for story events, encounters, objectives, and transition anchors.
-- Keep temporary test geometry visibly marked and documented.
-- Exported or packaged map artifacts belong under `build/sol`, not in source control.
+- `e1m1/stats.json` records structural and encounter budgets.
+- `e1m1/layout.svg` documents the connected zone sequence.
 
-The first playable graybox must implement the zones and exit gates described in `docs/sol/e1m1-graybox.md`.
+Generate and validate:
+
+```bash
+python3 tools/sol-generate-e1m1.py --output build/sol/generated/e1m1
+python3 tools/sol-validate-e1m1.py --directory build/sol/generated/e1m1
+bash tools/sol-build.sh
+```
+
+The generated WAD contains geometry and references to IWAD texture names. It contains no copied commercial textures, sounds, sprites, music, or other IWAD lumps.

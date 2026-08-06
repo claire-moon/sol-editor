@@ -1,16 +1,15 @@
-name: SOL foundation
+name: SOL graybox
 
 on:
   push:
-    branches:
-      - master
-      - 'sol/**'
+    branches: [master, 'sol/**']
     paths:
       - 'sol/**'
       - 'sol-project/**'
-      - 'tools/sol-*.sh'
+      - 'tools/sol-*'
       - 'docs/sol/**'
       - 'branding/sol/**'
+      - 'Source/Core/Resources/UDB2.ico'
       - 'SOL.md'
       - 'ROADMAP.md'
       - '.github/workflows/sol-foundation.yml'
@@ -18,9 +17,10 @@ on:
     paths:
       - 'sol/**'
       - 'sol-project/**'
-      - 'tools/sol-*.sh'
+      - 'tools/sol-*'
       - 'docs/sol/**'
       - 'branding/sol/**'
+      - 'Source/Core/Resources/UDB2.ico'
       - 'SOL.md'
       - 'ROADMAP.md'
       - '.github/workflows/sol-foundation.yml'
@@ -32,22 +32,32 @@ jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Validate metadata
+      - uses: actions/checkout@v6
+      - name: Validate metadata and scripts
         run: |
           python3 -m json.tool sol/version.json >/dev/null
           python3 -m json.tool sol-project/project.json >/dev/null
-      - name: Validate shell scripts
-        run: bash -n tools/sol-*.sh
+          bash -n tools/sol-*.sh
+          python3 -m py_compile tools/sol-generate-e1m1.py tools/sol-validate-e1m1.py
+      - name: Verify generated map
+        run: |
+          mkdir -p build/sol/generated/e1m1
+          python3 tools/sol-generate-e1m1.py --output build/sol/generated/e1m1
+          python3 tools/sol-validate-e1m1.py --directory build/sol/generated/e1m1
+          cmp build/sol/generated/e1m1/stats.json sol-project/maps/e1m1/stats.json
+          cmp build/sol/generated/e1m1/layout.svg sol-project/maps/e1m1/layout.svg
       - name: Verify pinned DoomTools revision
         run: bash tools/sol-bootstrap-doomtools.sh --verify-only
-      - name: Build foundation package
+      - name: Build graybox package
         env:
           SOL_SKIP_DOOMTOOLS: '1'
         run: bash tools/sol-build.sh
-      - name: Inspect package
+      - name: Inspect package and branding
         run: |
-          archive=$(find build/sol -maxdepth 1 -name 'sol-e1m1-v*.pk3' -print -quit)
+          archive=$(find build/sol -maxdepth 1 -name 'sol-e1m1-v0.1.0-dev.pk3' -print -quit)
           test -n "$archive"
           unzip -t "$archive"
           unzip -Z1 "$archive" | grep -Fx SOLINFO
+          unzip -Z1 "$archive" | grep -Fx maps/E1M1.wad
+          test -s branding/sol/sol-icon-master.png
+          test -s Source/Core/Resources/UDB2.ico
