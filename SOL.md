@@ -4,6 +4,12 @@
 It coordinates map authoring, DoomTools automation, validation, packaging, and
 test launches against the locally built `sol-engine` fork.
 
+## Current release
+
+`v0.1.0` establishes the deterministic E1M1 graybox, classic Doom progression,
+shared SOL branding, guided local setup, and the fourteen-resource locked
+visual/audio contract used by both authoring and test launches.
+
 ## First run
 
 ```text
@@ -38,7 +44,9 @@ archives into `../vend/wadpack`, records hashes, and refuses a launch when a
 required resource is absent or changed.
 
 The resource binaries remain local because several components require a full
-redistribution audit. They are not committed to the public repository.
+redistribution audit. They are not committed to the public repository. The
+v0.1.0 source release therefore defines and enforces the stack without bundling
+third-party payloads.
 
 When the editor is launched with `sol-edit`, the fourteen locked resources are
 added to its in-memory authoring resource list in manifest order. Their textures,
