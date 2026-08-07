@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "name": "SOL locked visual wadset",
-  "version": "0.1.0-dev",
+  "version": "0.1.0",
   "load_order": [
     {
       "id": "voxel-doom",
