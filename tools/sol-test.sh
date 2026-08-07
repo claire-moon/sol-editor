@@ -33,8 +33,15 @@ if [[ -z ${SOL_RUNTIME_PKG:-} || ! -f $SOL_RUNTIME_PKG ]]; then
     exit 1
 fi
 
-bash "$SOL_ENGINE_ROOT/tools/sol-mod-stack.sh" --check >/dev/null
-mapfile -d '' -t mod_files < <(bash "$SOL_ENGINE_ROOT/tools/sol-mod-stack.sh" --print0)
+if [[ -n ${SOL_MOD_ROOT:-} ]]; then
+    mod_root=$SOL_MOD_ROOT
+elif [[ -n ${SOL_VEND:-} ]]; then
+    mod_root="$SOL_VEND/sol-mods"
+else
+    mod_root="$SOL_ENGINE_ROOT/../vend/sol-mods"
+fi
+SOL_MOD_ROOT="$mod_root" bash "$SOL_ENGINE_ROOT/tools/sol-mod-stack.sh" --check >/dev/null
+mapfile -d '' -t mod_files < <(SOL_MOD_ROOT="$mod_root" bash "$SOL_ENGINE_ROOT/tools/sol-mod-stack.sh" --print0)
 packages=("${mod_files[@]}" "$SOL_RUNTIME_PKG" "$content_package")
 args=(-file "${packages[@]}")
 if [[ -n ${DOOM_IWAD:-} ]]; then
