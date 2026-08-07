@@ -3,23 +3,13 @@
 ## Completed
 
 - `v0.0.1`: repository foundation, pinned DoomTools, shared launch contract, package validation.
+- `v0.1.0`: deterministic E1M1 graybox, classic Doom episode progression contract, Midnight Commander setup cockpit, shared SOL branding, fourteen-resource locked wadpack tooling, editor authoring-resource injection, strict editor test-engine wrapper, and green Linux/Windows/Flatpak/SOL CI.
 
-## Active — Phase 1: E1M1 Graybox (`v0.1.0`)
+The v0.1.0 source release does not redistribute the third-party wadpack. Local
+play is intentionally blocked until all fourteen required resources are present
+and verified under `vend/wadpack`; HQ PSX music remains a local deployment input.
 
-- Generate and validate the complete E1M1 critical path.
-- Keep the map editable as UDMF and testable in the local `sol-engine` fork.
-- Preserve the normal Doom statistics and Episode 1 world-map intermission.
-- Provide the Midnight Commander setup cockpit.
-- Lock the approved fourteen-resource wadpack and inject it into every SOL launch.
-- Normalize wrapper archives and detect missing or changed resources.
-- Provide a stable SOL Editor test-engine wrapper using the same load order.
-- Keep inherited Linux, Windows, and Flatpak CI green.
-
-Exit gate: a clean sibling checkout can configure its IWAD and complete wadpack,
-build both applications, launch E1M1 with the exact locked resources, complete
-the classic intermission, and repeat the process without manual command lines.
-
-## Phase 2 — Story Authoring (`v0.2.0`)
+## Active — Phase 2: Story Authoring (`v0.2.0`)
 
 Add stable event IDs, objectives, subtitles, radio events, save/load validation,
 and reusable story prefabs within individual maps. Begin tuning wadpack settings
