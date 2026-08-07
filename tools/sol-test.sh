@@ -20,22 +20,21 @@ if [[ -z ${SOL_ENGINE:-} ]]; then
     printf 'SOL_ENGINE is not configured. Run tools/sol-init-workspace.sh first.\n' >&2
     exit 1
 fi
-engine=$SOL_ENGINE
-if [[ ! -x $engine ]]; then
-    printf 'SOL_ENGINE is not executable: %s\n' "$engine" >&2
+if [[ ! -x $SOL_ENGINE ]]; then
+    printf 'SOL_ENGINE is not executable: %s\n' "$SOL_ENGINE" >&2
+    exit 1
+fi
+if [[ -z ${SOL_ENGINE_ROOT:-} || ! -x $SOL_ENGINE_ROOT/tools/sol-mod-stack.sh ]]; then
+    printf 'SOL_ENGINE_ROOT does not provide the SOL mod resolver. Reinitialize the workspace.\n' >&2
+    exit 1
+fi
+if [[ -z ${SOL_RUNTIME_PKG:-} || ! -f $SOL_RUNTIME_PKG ]]; then
+    printf 'SOL_RUNTIME_PKG is not configured or missing. Reinitialize the workspace.\n' >&2
     exit 1
 fi
 
-packages=()
-if [[ -n ${SOL_RUNTIME_PKG:-} ]]; then
-    if [[ ! -f $SOL_RUNTIME_PKG ]]; then
-        printf 'SOL_RUNTIME_PKG does not exist: %s\n' "$SOL_RUNTIME_PKG" >&2
-        exit 1
-    fi
-    packages+=("$SOL_RUNTIME_PKG")
-fi
-packages+=("$content_package")
-
+mapfile -d '' -t mod_files < <(SOL_MOD_ROOT="${SOL_MOD_ROOT:-}" bash "$SOL_ENGINE_ROOT/tools/sol-mod-stack.sh" --print0)
+packages=("${mod_files[@]}" "$SOL_RUNTIME_PKG" "$content_package")
 args=(-file "${packages[@]}")
 if [[ -n ${DOOM_IWAD:-} ]]; then
     if [[ ! -f $DOOM_IWAD ]]; then
@@ -45,4 +44,4 @@ if [[ -n ${DOOM_IWAD:-} ]]; then
     args=(-iwad "$DOOM_IWAD" "${args[@]}")
 fi
 
-exec "$engine" "${args[@]}" +map "$map_name" "$@"
+exec "$SOL_ENGINE" "${args[@]}" +map "$map_name" "$@"
