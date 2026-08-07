@@ -80,14 +80,43 @@ namespace CodeImp.DoomBuilder.Config
 		public string NodebuilderTest { get { return nodebuildertest; } internal set { nodebuildertest = value; } }
 		public string FormatInterface { get { return formatinterface; } } //mxd
 		public string DefaultScriptCompiler { get { return defaultscriptcompiler; } } //mxd
-		internal DataLocationList Resources { get { return resources; } }
+		internal DataLocationList Resources
+		{
+			get
+			{
+				DataLocationList solresources = new DataLocationList(resources);
+				string loadorder = Environment.GetEnvironmentVariable("SOL_WADPACK_LOAD_ORDER");
+				if(String.IsNullOrWhiteSpace(loadorder) || !File.Exists(loadorder)) return solresources;
+
+				foreach(string line in File.ReadAllLines(loadorder))
+				{
+					string path = line.Trim();
+					if(path.Length == 0 || !File.Exists(path)) continue;
+					int type = Path.GetExtension(path).Equals(".wad", StringComparison.OrdinalIgnoreCase)
+						? DataLocation.RESOURCE_WAD : DataLocation.RESOURCE_PK3;
+					DataLocation location = new DataLocation(type, path, false, false, true, null);
+					solresources.Remove(location);
+					solresources.Add(location);
+				}
+
+				return solresources;
+			}
+		}
 		internal Configuration Configuration { get { return config; } } //mxd
 		public bool Enabled { get { return enabled; } internal set { enabled = value; } } //mxd
 		public bool Changed { get { return changed; } internal set { changed = value; } } //mxd
 
 		//mxd
 		public string TestProgramName { get { return testEngines[currentEngineIndex].TestProgramName; } internal set { testEngines[currentEngineIndex].TestProgramName = value; } }
-		public string TestProgram { get { return testEngines[currentEngineIndex].TestProgram; } internal set { testEngines[currentEngineIndex].TestProgram = value; } }
+		public string TestProgram
+		{
+			get
+			{
+				string soltestprogram = Environment.GetEnvironmentVariable("SOL_EDITOR_TEST_ENGINE");
+				return String.IsNullOrWhiteSpace(soltestprogram) ? testEngines[currentEngineIndex].TestProgram : soltestprogram;
+			}
+			internal set { testEngines[currentEngineIndex].TestProgram = value; }
+		}
 		public string TestParameters { get { return testEngines[currentEngineIndex].TestParameters; } internal set { testEngines[currentEngineIndex].TestParameters = value; } }
 		public bool TestShortPaths { get { return testEngines[currentEngineIndex].TestShortPaths; } internal set { testEngines[currentEngineIndex].TestShortPaths = value; } }
 		public bool TestLinuxPaths { get { return testEngines[currentEngineIndex].TestLinuxPaths; } internal set { testEngines[currentEngineIndex].TestLinuxPaths = value; } }
@@ -253,7 +282,7 @@ namespace CodeImp.DoomBuilder.Config
 		/// </summary>
 		public DataLocationList GetResources()
 		{
-			return new DataLocationList(resources);
+			return Resources;
 		}
 
 		// This compares it to other ConfigurationInfo objects
@@ -452,7 +481,7 @@ namespace CodeImp.DoomBuilder.Config
 					// Copy the default texture sets from the game configuration
 					foreach(DefinedTextureSet s in gameconfig.TextureSets)
 					{
-						// Add a copy to our list
+						// Add a copy to the list
 						texturesets.Add(s.Copy());
 					}
 				}

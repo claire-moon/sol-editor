@@ -1,45 +1,72 @@
 # SOL Editor
 
-`sol-editor` is the SOL content-development fork based on Ultimate Doom Builder. It coordinates map authoring, DoomTools automation, validation, packaging, and test launches against the locally built `sol-engine` fork.
+`sol-editor` is the SOL content-development fork based on Ultimate Doom Builder.
+It coordinates map authoring, DoomTools automation, validation, packaging, and
+test launches against the locally built `sol-engine` fork.
 
-## Current release
+## First run
 
-`v0.1.0-dev` contains the generated E1M1 graybox, classic Doom episode progression, shared branding, reproducible packaging, and repaired inherited CI.
-
-Initialize the sibling workspace and user-owned IWAD directory:
-
-```bash
-bash tools/sol-init-workspace.sh --primary-iwad /path/to/DOOM.WAD
-source .sol-env
+```text
+sol/
+├── sol-engine/
+├── sol-editor/
+└── vend/
 ```
 
-The initializer creates or updates `../vend/iwads`, packages the sibling `../sol-engine` runtime, records IWAD checksums, and writes the exact local engine executable and package paths to `.sol-env`. It never downloads commercial Doom data.
-
-Generate, validate, and test E1M1:
-
 ```bash
-python3 tools/sol-generate-e1m1.py --output build/sol/generated/e1m1
-python3 tools/sol-validate-e1m1.py --directory build/sol/generated/e1m1
-bash tools/sol-build.sh
-bash tools/sol-test.sh E1M1
+cd sol-editor
+bash tools/sol-cockpit.sh
 ```
 
-`tools/sol-test.sh` requires the configured `sol-engine` executable and does not fall back to a generic system UZDoom installation.
+The cockpit configures the sibling repositories and a user-owned IWAD. The first
+play or editor launch then opens the locked wadpack importer when the required
+visual/audio stack is incomplete.
 
-Build the editor itself with the existing upstream build process:
+After setup:
 
 ```bash
-make linux
+sol          # setup/status cockpit
+sol-play     # launch E1M1 with the locked wadpack
+sol-edit     # edit and test with the locked wadpack
 ```
+
+## Locked resource stack
+
+`sol-project/wadpack.json` defines the exact fourteen-resource load order copied
+from the approved Rocket Launcher configuration. The importer normalizes nested
+archives into `../vend/wadpack`, records hashes, and refuses a launch when a
+required resource is absent or changed.
+
+The resource binaries remain local because several components require a full
+redistribution audit. They are not committed to the public repository.
+
+When the editor is launched with `sol-edit`, the fourteen locked resources are
+added to its in-memory authoring resource list in manifest order. Their textures,
+sprites, actors, and definitions are available while mapping without changing
+the user's normal Ultimate Doom Builder resource configuration.
+
+Editor playtests use this stable test-engine executable automatically:
+
+```text
+tools/sol-editor-engine.sh
+```
+
+`sol-edit` exposes the wrapper through `SOL_EDITOR_TEST_ENGINE`; the SOL editor
+fork temporarily substitutes it for the configured test executable without
+rewriting the user's normal editor settings. The authoring-only injected
+resources are excluded from UDB's generated test arguments, and the wrapper is
+the single runtime injection point for the same locked wadpack and SOL runtime.
+See `docs/sol/wadpack.md`.
 
 ## Repository layout
 
 - `Source/`, `Builder.sln`, and related files: inherited editor source.
-- `tools/sol-init-workspace.sh`: local engine/IWAD/vendor initialization.
+- `tools/sol-cockpit.sh`: first-run setup and ongoing MC cockpit.
+- `tools/sol-wadpack.py`: deterministic import, normalization, locking, and verification.
+- `tools/sol-wadpack-setup.sh`: guided wadpack source selector.
+- `tools/sol-editor-engine.sh`: fixed-resource editor test-engine wrapper.
 - `tools/sol-generate-e1m1.py`: E1M1 UDMF source generator.
+- `sol-project/wadpack.json`: authoritative load order and source hashes.
 - `sol-project/maps/e1m1/`: map budget and layout review artifacts.
-- `tools/sol-*`: generation, validation, build, and launch commands.
-- `docs/sol/`: release and authoring contracts.
+- `docs/sol/`: setup, release, wadpack, and authoring contracts.
 - `branding/sol/`: approved SOL application identity assets.
-
-Do not commit commercial IWAD resources. Local configuration references a legally obtained IWAD stored under the sibling `vend` directory.
