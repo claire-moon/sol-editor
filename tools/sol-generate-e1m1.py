@@ -98,7 +98,7 @@ def make_textmap():
             ("skill4", True), ("skill5", True), ("single", True), ("coop", True),
         ]))
     stats = {
-        "map": "E1M1", "version": "0.1.0-dev", "vertices": 30,
+        "map": "E1M1", "version": "0.1.0", "vertices": 30,
         "linedefs": len(linedefs), "sidedefs": len(sidedefs), "sectors": 14,
         "things": len(things), "monsters": 176,
     }

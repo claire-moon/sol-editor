@@ -10,6 +10,7 @@ on:
       - 'tests/**'
       - 'docs/sol/**'
       - 'branding/sol/**'
+      - 'Source/Core/Config/ConfigurationInfo.cs'
       - 'Source/Core/Resources/UDB2.ico'
       - 'SOL.md'
       - 'ROADMAP.md'
@@ -23,6 +24,7 @@ on:
       - 'tests/**'
       - 'docs/sol/**'
       - 'branding/sol/**'
+      - 'Source/Core/Config/ConfigurationInfo.cs'
       - 'Source/Core/Resources/UDB2.ico'
       - 'SOL.md'
       - 'ROADMAP.md'
@@ -37,14 +39,43 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+      - name: Install archive test dependency
+        run: sudo apt-get update && sudo apt-get install -y p7zip-full
       - name: Validate metadata and scripts
         run: |
           python3 -m json.tool sol/version.json >/dev/null
           python3 -m json.tool sol-project/project.json >/dev/null
+          python3 -m json.tool sol-project/wadpack.json >/dev/null
           bash -n tools/sol-*.sh tests/*.sh
-          python3 -m py_compile tools/sol-generate-e1m1.py tools/sol-validate-e1m1.py
-      - name: Verify workspace initializer
-        run: bash tests/test-sol-init-workspace.sh
+          python3 -m py_compile \
+            tools/sol-generate-e1m1.py \
+            tools/sol-validate-e1m1.py \
+            tools/sol-wadpack.py
+      - name: Validate release contract
+        run: |
+          python3 - <<'PY'
+          import json
+          with open('sol/version.json', encoding='utf-8') as f:
+              version = json.load(f)
+          with open('sol-project/project.json', encoding='utf-8') as f:
+              project = json.load(f)
+          with open('sol-project/wadpack.json', encoding='utf-8') as f:
+              wadpack = json.load(f)
+          assert version['version'] == '0.1.0'
+          assert version['engine_contract'] == '0.1.0'
+          assert version['wadpack_contract'] == 1
+          assert version['wadpack_entries'] == 14
+          assert project['version'] == '0.1.0'
+          assert project['engine_package'] == 'sol-e1m1-v0.1.0.pk3'
+          assert project['wadpack_contract'] == 1
+          assert wadpack['version'] == '0.1.0'
+          assert len(wadpack['load_order']) == 14
+          PY
+      - name: Verify setup, cockpit, wadpack, and launchers
+        run: |
+          for test_script in tests/test-sol-*.sh; do
+            bash "$test_script"
+          done
       - name: Verify generated map
         run: |
           mkdir -p build/sol/generated/e1m1
@@ -61,7 +92,7 @@ jobs:
         run: bash tools/sol-build.sh
       - name: Inspect package and branding
         run: |
-          archive=$(find build/sol -maxdepth 1 -name 'sol-e1m1-v0.1.0-dev.pk3' -print -quit)
+          archive=$(find build/sol -maxdepth 1 -name 'sol-e1m1-v0.1.0.pk3' -print -quit)
           test -n "$archive"
           unzip -t "$archive"
           unzip -Z1 "$archive" | grep -Fx SOLINFO

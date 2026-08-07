@@ -1,10 +1,12 @@
 {
   "project": "SOL Editor",
-  "version": "0.1.0-dev",
+  "version": "0.1.0",
   "release": "graybox",
-  "engine_contract": "0.1.0-dev",
+  "engine_contract": "0.1.0",
   "map": "E1M1",
   "map_format": "UDMF",
+  "wadpack_contract": 1,
+  "wadpack_entries": 14,
   "doomtools": {
     "repository": "https://github.com/MTrop/DoomTools.git",
     "commit": "b2590d80918c02c9605c5338e31eaa98a2089e5f"

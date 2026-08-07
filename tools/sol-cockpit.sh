@@ -10,4 +10,4 @@ while [[ -L $source_path ]]; do
     fi
 done
 script_dir=$(cd -P "$(dirname "$source_path")" && pwd)
-exec bash "$script_dir/sol-test-main.sh" "$@"
+exec bash "$script_dir/sol-cockpit-main.sh" "$@"

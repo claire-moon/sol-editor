@@ -1,0 +1,153 @@
+{
+  "schema": 1,
+  "name": "SOL locked visual wadset",
+  "version": "0.1.0",
+  "load_order": [
+    {
+      "id": "voxel-doom",
+      "display_name": "Voxel Doom 2.4",
+      "source_names": ["VoxelDoom_v2.4.pk3"],
+      "source_sha256": ["1731e86d9bd92aec45cf42a6ed28f92b939bc73f235cc682bbfbe26fea868962"],
+      "runtime_name": "01-voxel-doom-v2.4.pk3",
+      "transform": {"type": "copy"},
+      "distribution": "review-required",
+      "required": true
+    },
+    {
+      "id": "universal-weapon-sway",
+      "display_name": "Universal Weapon Sway 1.0",
+      "source_names": ["Universal-Weapon-Sway-master.zip"],
+      "source_sha256": ["5d24c83521b6710b2bae12c1dd995a9aee569873071e2a0f5cfd33bed72fafac"],
+      "runtime_name": "02-universal-weapon-sway.pk3",
+      "transform": {"type": "zip_strip_single_root"},
+      "distribution": "MIT",
+      "required": true
+    },
+    {
+      "id": "troo-cullers",
+      "display_name": "Troo Cullers 2.5",
+      "source_names": ["TrooCullers2.5.pk3"],
+      "source_sha256": ["6cf225295354e0db9b2efa259c51625ccbed10211d2724bf6f8cff8b30e52e7e"],
+      "runtime_name": "03-troo-cullers-2.5.pk3",
+      "transform": {"type": "copy"},
+      "distribution": "review-required",
+      "required": true
+    },
+    {
+      "id": "tilt-plus-plus",
+      "display_name": "Tilt++",
+      "source_names": ["TiltPlusPlus.pk3"],
+      "source_sha256": ["4c385db4a3ac4525f194c6ace8b227d9a0e677b844238b00abfe7562476ae8e5"],
+      "runtime_name": "04-tilt-plus-plus.pk3",
+      "transform": {"type": "copy"},
+      "distribution": "BSD-3-Clause",
+      "required": true
+    },
+    {
+      "id": "relite",
+      "display_name": "Relighting 0.7.3b",
+      "source_names": ["relite_0.7.3b.pk3"],
+      "source_sha256": ["f7d816929279306a5438e3422691482bc7aa28cd42445d1161d0718e32a0c802"],
+      "runtime_name": "05-relite-0.7.3b.pk3",
+      "transform": {"type": "copy"},
+      "distribution": "review-required",
+      "required": true
+    },
+    {
+      "id": "angled-doom-lite",
+      "display_name": "Angled Doom Lite 1.2.1",
+      "source_names": ["jdra-Angled-Doom-Lite-1.2.1.pk3"],
+      "source_sha256": ["f463b8908fd7f74f0712cdfef1b65ffdeefb0938438790e923bafb088bdee657"],
+      "runtime_name": "06-angled-doom-lite-1.2.1.pk3",
+      "transform": {"type": "copy"},
+      "distribution": "permission-included",
+      "required": true
+    },
+    {
+      "id": "nashgore-next",
+      "display_name": "NashGore NEXT",
+      "source_names": ["nashgore_next.zip", "nashgore.pk3"],
+      "source_sha256": [
+        "9cb2199071efa195b8329000018acda3dd408571ea18a9d6234b6b60a5f0ae1e",
+        "f9e500f413a31308d475a2ea46ee3ffadd23cdf354a21c07c1458d615ecd9706"
+      ],
+      "runtime_name": "07-nashgore-next.pk3",
+      "transform": {"type": "zip_member", "member_suffix": "nashgore.pk3", "allow_direct": true},
+      "distribution": "review-required",
+      "required": true
+    },
+    {
+      "id": "nashgore-voxels",
+      "display_name": "NashGore official voxels",
+      "source_names": ["nashgore_voxels_official.pk3"],
+      "source_sha256": ["0729701f059884322bc135e373e02a4b4a6235cd75812569fbd07eb77869533f"],
+      "runtime_name": "08-nashgore-voxels-official.pk3",
+      "transform": {"type": "copy"},
+      "distribution": "review-required",
+      "required": true
+    },
+    {
+      "id": "final-custom-doom",
+      "display_name": "Final Custom Doom 1.0.0 beta",
+      "source_names": ["FinalCustomDoom-v1.0.0-beta.pk3"],
+      "source_sha256": ["056474c37dd409f271619e8edb5ac17bda0ce3bc77333b74b5489ef02fdff909"],
+      "runtime_name": "09-final-custom-doom-v1.0.0-beta.pk3",
+      "transform": {"type": "copy"},
+      "distribution": "GPL-3.0-only-with-asset-review",
+      "required": true
+    },
+    {
+      "id": "vanilla-essence",
+      "display_name": "Vanilla Essence 4.3",
+      "source_names": ["Vanilla Essence 4.3.pk3", "Vanilla_Essence_4.3.pk3"],
+      "source_sha256": ["232089c4711ee63e980070bd8d8f21935ad7517ef660abc85f41dbc7d8253923"],
+      "runtime_name": "10-vanilla-essence-4.3.pk3",
+      "transform": {"type": "copy"},
+      "distribution": "review-required",
+      "required": true
+    },
+    {
+      "id": "hq-psx-music",
+      "display_name": "HQ PSX music",
+      "source_names": ["HQPSXMUS.WAD.zip", "HQPSXMUS.WAD", "HQPSXMUS.wad"],
+      "source_sha256": [],
+      "runtime_name": "11-hq-psx-music.wad",
+      "transform": {"type": "zip_member_or_direct", "member_extension": ".wad", "allow_unlocked_direct": true},
+      "distribution": "local-only-proprietary-audio",
+      "required": true
+    },
+    {
+      "id": "psx-sfx",
+      "display_name": "PlayStation sound effects",
+      "source_names": ["PSSFX.zip", "PSSFX.wad"],
+      "source_sha256": [
+        "28cfc043edf511274c143f80b688b1f816846933b6773fcb1a5900d11ccf3ad6",
+        "80717554fddd1b772f4dfad71f9a8bb9c21d548c17446519133d34069063511b"
+      ],
+      "runtime_name": "12-psx-sfx.wad",
+      "transform": {"type": "zip_member_or_direct", "member_suffix": "PSSFX.wad"},
+      "distribution": "local-only-proprietary-audio",
+      "required": true
+    },
+    {
+      "id": "flashlight-plus-plus",
+      "display_name": "Flashlight++ 9.1",
+      "source_names": ["flashlight_plus_plus_v9_1.7z", "flashlight_plus_plus_v9_1.pk3"],
+      "source_sha256": ["0a22e0739c0c54ec6a3d3cfa675b356450f65c45b6f037689b661721a4a5f5ce"],
+      "runtime_name": "13-flashlight-plus-plus-v9_1.pk3",
+      "transform": {"type": "sevenzip_member_or_direct", "member_suffix": "flashlight_plus_plus_v9_1.pk3", "allow_unlocked_direct": true},
+      "distribution": "review-required",
+      "required": true
+    },
+    {
+      "id": "alpha-hud",
+      "display_name": "WW Alpha HUD",
+      "source_names": ["ww-alphahud.wad"],
+      "source_sha256": ["22aa3f957bca54fbe7c9264fdb183da4238dcbad7ca0cb9be9838e43ad99ab9c"],
+      "runtime_name": "14-ww-alpha-hud.wad",
+      "transform": {"type": "copy"},
+      "distribution": "review-required",
+      "required": true
+    }
+  ]
+}

@@ -5,24 +5,26 @@ root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 workspace=$(cd "$root/.." && pwd)
 engine_root=${SOL_ENGINE_ROOT:-"$workspace/sol-engine"}
 vend_root=${SOL_VEND_ROOT:-"$workspace/vend"}
-env_file="$root/.sol-env"
+env_file=${SOL_ENV_FILE:-"$root/.sol-env"}
 mode=copy
 engine_override=
+editor_override=
 primary_override=
 search_enabled=1
 declare -a supplied_iwads=()
 
 usage() {
-    cat <<'EOF'
+    cat <<'USAGE'
 Usage: tools/sol-init-workspace.sh [options]
 
-Prepare a local SOL workspace around sibling sol-engine, sol-editor, and vend
-directories. Commercial IWADs are never downloaded.
+Prepare sibling sol-engine, sol-editor, and vend directories. Commercial IWADs
+are never downloaded.
 
 Options:
-  --workspace DIR      Workspace containing sol-engine, sol-editor, and vend
+  --workspace DIR      Workspace containing the three sibling directories
   --engine-root DIR    Local sol-engine checkout
   --engine FILE        Built executable from the local sol-engine checkout
+  --editor FILE        Built sol-editor launcher
   --vend DIR           Third-party file directory
   --iwad FILE          Add a user-owned IWAD; may be repeated
   --primary-iwad FILE  Add and select the primary IWAD
@@ -31,61 +33,36 @@ Options:
   --env-file FILE      Generated shell environment file
   --no-search          Do not scan common local game-install paths
   -h, --help           Show this help
-EOF
+USAGE
+}
+
+require_arg() {
+    if (($# < 2)) || [[ -z ${2:-} ]]; then
+        printf 'Option %s requires a value.\n' "$1" >&2
+        exit 2
+    fi
 }
 
 while (($#)); do
     case $1 in
-        --workspace)
-            workspace=$2
-            shift 2
-            ;;
-        --engine-root)
-            engine_root=$2
-            shift 2
-            ;;
-        --engine)
-            engine_override=$2
-            shift 2
-            ;;
-        --vend)
-            vend_root=$2
-            shift 2
-            ;;
-        --iwad)
-            supplied_iwads+=("$2")
-            shift 2
-            ;;
+        --workspace) require_arg "$@"; workspace=$2; shift 2 ;;
+        --engine-root) require_arg "$@"; engine_root=$2; shift 2 ;;
+        --engine) require_arg "$@"; engine_override=$2; shift 2 ;;
+        --editor) require_arg "$@"; editor_override=$2; shift 2 ;;
+        --vend) require_arg "$@"; vend_root=$2; shift 2 ;;
+        --iwad) require_arg "$@"; supplied_iwads+=("$2"); shift 2 ;;
         --primary-iwad)
+            require_arg "$@"
             primary_override=$2
             supplied_iwads+=("$2")
             shift 2
             ;;
-        --copy)
-            mode=copy
-            shift
-            ;;
-        --link)
-            mode=link
-            shift
-            ;;
-        --env-file)
-            env_file=$2
-            shift 2
-            ;;
-        --no-search)
-            search_enabled=0
-            shift
-            ;;
-        -h|--help)
-            usage
-            exit 0
-            ;;
-        *)
-            printf 'Unknown option: %s\n' "$1" >&2
-            usage >&2
-            exit 2
-            ;;
+        --copy) mode=copy; shift ;;
+        --link) mode=link; shift ;;
+        --env-file) require_arg "$@"; env_file=$2; shift 2 ;;
+        --no-search) search_enabled=0; shift ;;
+        -h|--help) usage; exit 0 ;;
+        *) printf 'Unknown option: %s\n' "$1" >&2; usage >&2; exit 2 ;;
     esac
 done
 
@@ -96,54 +73,54 @@ env_file=$(realpath -m "$env_file")
 iwad_dir="$vend_root/iwads"
 mkdir -p "$iwad_dir" "$vend_root/pwads" "$vend_root/assets" "$vend_root/licenses"
 
-if [[ ! -d $engine_root/.git && ! -f $engine_root/tools/sol-package.sh ]]; then
+if [[ ! -f $engine_root/tools/sol-package.sh ]]; then
     printf 'SOL engine checkout not found: %s\n' "$engine_root" >&2
     exit 1
 fi
-if [[ ! -x $engine_root/tools/sol-package.sh ]]; then
-    if [[ -f $engine_root/tools/sol-package.sh ]]; then
-        chmod +x "$engine_root/tools/sol-package.sh"
-    else
-        printf 'SOL runtime packager not found: %s\n' "$engine_root/tools/sol-package.sh" >&2
-        exit 1
-    fi
-fi
+chmod +x "$engine_root/tools/sol-package.sh"
 
 find_engine() {
     local candidate
-    if [[ -n $engine_override ]]; then
-        printf '%s\n' "$engine_override"
-        return
-    fi
     for candidate in \
+        "$engine_override" \
+        "${SOL_ENGINE:-}" \
+        "$engine_root/build/sol-local/uzdoom" \
         "$engine_root/build/uzdoom" \
         "$engine_root/build/Release/uzdoom" \
         "$engine_root/build/Debug/uzdoom" \
         "$engine_root/build/src/uzdoom" \
-        "$engine_root/build/sol-engine" \
         "$engine_root/uzdoom"; do
-        if [[ -x $candidate ]]; then
-            printf '%s\n' "$candidate"
-            return
+        if [[ -n $candidate && -x $candidate ]]; then
+            realpath "$candidate"
+            return 0
         fi
     done
-    candidate=$(find "$engine_root" -maxdepth 5 -type f \
+    candidate=$(find "$engine_root/build" -maxdepth 5 -type f \
         \( -name uzdoom -o -name sol-engine -o -name 'UZDoom*.AppImage' \) \
         -perm -111 -print -quit 2>/dev/null || true)
-    [[ -n $candidate ]] && printf '%s\n' "$candidate"
+    [[ -n $candidate ]] && realpath "$candidate"
+}
+
+find_editor() {
+    local candidate
+    for candidate in "$editor_override" "${SOL_EDITOR:-}" "$root/Build/builder"; do
+        if [[ -n $candidate && -x $candidate ]]; then
+            realpath "$candidate"
+            return 0
+        fi
+    done
+    return 1
 }
 
 engine=$(find_engine)
-if [[ -z $engine ]]; then
+if [[ -z $engine || ! -x $engine ]]; then
     printf 'No built sol-engine executable was found under %s\n' "$engine_root" >&2
-    printf 'Build sol-engine, then rerun with --engine /absolute/path/to/uzdoom.\n' >&2
     exit 1
 fi
-engine=$(realpath "$engine")
-if [[ ! -x $engine ]]; then
-    printf 'SOL engine is not executable: %s\n' "$engine" >&2
+editor=$(find_editor) || {
+    printf 'No built sol-editor launcher was found.\n' >&2
     exit 1
-fi
+}
 
 runtime_package=$(bash "$engine_root/tools/sol-package.sh" | tail -n 1)
 runtime_package=$(realpath -m "$runtime_package")
@@ -166,13 +143,15 @@ is_iwad() {
 
 declare -a candidates=()
 declare -A candidate_seen=()
+declare -A supplied_seen=()
 
 add_candidate() {
-    local path
+    local path supplied=${2:-0}
     path=$(realpath -m "$1")
     [[ -f $path ]] || return 0
     [[ -n ${candidate_seen[$path]:-} ]] && return 0
     candidate_seen[$path]=1
+    ((supplied)) && supplied_seen[$path]=1
     candidates+=("$path")
 }
 
@@ -181,7 +160,7 @@ for path in "${supplied_iwads[@]}"; do
         printf 'IWAD file does not exist: %s\n' "$path" >&2
         exit 1
     fi
-    add_candidate "$path"
+    add_candidate "$path" 1
 done
 
 if ((search_enabled)); then
@@ -211,7 +190,6 @@ fi
 
 if ((${#candidates[@]} == 0)); then
     printf 'No IWADs were found.\n' >&2
-    printf 'Copy a legally obtained DOOM.WAD into %s or rerun with --iwad FILE.\n' "$iwad_dir" >&2
     exit 1
 fi
 
@@ -219,8 +197,11 @@ declare -a installed=()
 declare -A installed_seen=()
 for source_path in "${candidates[@]}"; do
     if ! is_iwad "$source_path"; then
-        printf 'Rejected file without an IWAD header: %s\n' "$source_path" >&2
-        exit 1
+        if [[ -n ${supplied_seen[$source_path]:-} ]]; then
+            printf 'Rejected file without an IWAD header: %s\n' "$source_path" >&2
+            exit 1
+        fi
+        continue
     fi
     name=$(canonical_iwad_name "$source_path")
     destination="$iwad_dir/$name"
@@ -238,15 +219,17 @@ for source_path in "${candidates[@]}"; do
     fi
 done
 
+if ((${#installed[@]} == 0)); then
+    printf 'No valid IWADs were installed.\n' >&2
+    exit 1
+fi
+
 select_primary() {
     local preferred path
     if [[ -n $primary_override ]]; then
         preferred=$(canonical_iwad_name "$primary_override")
         path="$iwad_dir/$preferred"
-        [[ -f $path ]] || {
-            printf 'Primary IWAD was not installed: %s\n' "$path" >&2
-            return 1
-        }
+        [[ -f $path ]] || return 1
         printf '%s\n' "$path"
         return
     fi
@@ -259,10 +242,10 @@ select_primary() {
     printf '%s\n' "${installed[0]}"
 }
 
-primary_iwad=$(select_primary)
-if [[ ${primary_iwad##*/} != doom.wad && ${primary_iwad##*/} != doom1.wad ]]; then
-    printf 'Warning: the classic Episode 1 world map requires a Doom/Ultimate Doom IWAD.\n' >&2
-fi
+primary_iwad=$(select_primary) || {
+    printf 'Primary IWAD was not installed.\n' >&2
+    exit 1
+}
 
 manifest="$vend_root/IWADS.sha256"
 : > "$manifest"
@@ -270,7 +253,7 @@ for path in "${installed[@]}"; do
     sha256sum "$path" >> "$manifest"
 done
 
-cat > "$vend_root/README.txt" <<EOF
+cat > "$vend_root/README.txt" <<'README'
 SOL local third-party files
 
 iwads/     User-owned IWADs. These files are never committed.
@@ -280,17 +263,15 @@ licenses/  License and provenance records.
 IWADS.sha256 records the installed IWAD checksums.
 
 Commercial Doom data is not downloaded or redistributed by SOL.
-EOF
+README
 
-shell_quote() {
-    printf '%q' "$1"
-}
-
+shell_quote() { printf '%q' "$1"; }
 mkdir -p "$(dirname "$env_file")"
 {
     printf '# Generated by tools/sol-init-workspace.sh\n'
     printf 'export SOL_WORKSPACE=%s\n' "$(shell_quote "$workspace")"
     printf 'export SOL_EDITOR_ROOT=%s\n' "$(shell_quote "$root")"
+    printf 'export SOL_EDITOR=%s\n' "$(shell_quote "$editor")"
     printf 'export SOL_ENGINE_ROOT=%s\n' "$(shell_quote "$engine_root")"
     printf 'export SOL_ENGINE=%s\n' "$(shell_quote "$engine")"
     printf 'export SOL_VEND=%s\n' "$(shell_quote "$vend_root")"
@@ -301,7 +282,7 @@ chmod 600 "$env_file"
 
 printf 'SOL workspace initialized.\n'
 printf 'Engine: %s\n' "$engine"
+printf 'Editor: %s\n' "$editor"
 printf 'Runtime: %s\n' "$runtime_package"
 printf 'IWAD: %s\n' "$primary_iwad"
 printf 'Environment: %s\n' "$env_file"
-printf 'Run: source %q && bash %q E1M1\n' "$env_file" "$root/tools/sol-test.sh"

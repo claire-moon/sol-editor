@@ -22,6 +22,7 @@ bin
 # SOL local tools and generated content
 /.sol-tools
 /.sol-env
+/.sol-cockpit
 /build/sol
 /sol-project/doommake-workspace
 /sol-project/*.dbs
