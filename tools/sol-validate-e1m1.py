@@ -166,7 +166,7 @@ def main():
         if stats.get(plural) != actual:
             fail(f"{plural}: expected {stats.get(plural)}, found {actual}")
 
-    if stats.get("map") != "E1M1" or stats.get("version") != "0.1.0-dev":
+    if stats.get("map") != "E1M1" or stats.get("version") != "0.1.0":
         fail("generated metadata does not match the v0.1.0 E1M1 contract")
 
     validate_geometry(blocks, stats)
