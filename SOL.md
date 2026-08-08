@@ -10,6 +10,22 @@ test launches against the locally built `sol-engine` fork.
 shared SOL branding, guided local setup, and the eighteen-resource locked
 visual/audio contract used by both authoring and test launches.
 
+The physical SOL runtime payload is one file:
+
+```text
+sol.pk3
+```
+
+`sol.pk3` contains the eighteen normalized third-party WAD/PK3 resources, the
+SOL-owned engine runtime component, the current E1M1 content component,
+`SOLPACK.json`, and `THIRD_PARTY.md`.
+
+Each archive is stored byte-for-byte under a numbered root-level `.wad` carrier
+name. This uses UZDoom's native embedded-resource mechanism: UZDoom recognizes
+those root members as embedded archives, opens them by their actual file
+contents, and recursively mounts them in lexical 01→20 order. Gameplay therefore
+passes exactly one resource argument, `-file sol.pk3`.
+
 ## First run
 
 ```text
@@ -22,53 +38,64 @@ sol/
 ```bash
 cd sol-editor
 bash tools/sol-cockpit.sh
+bash tools/sol-wadpack-setup.sh
+bash tools/sol-package.sh
 ```
 
-The cockpit configures the sibling repositories and a user-owned IWAD. The first
-play or editor launch then opens the locked wadpack importer when the required
-visual/audio stack is incomplete.
+`vend/wadpack` is the build-time source for the locked third-party resources.
+Once a valid `sol.pk3` has been generated, normal SOL gameplay no longer depends
+on the loose `vend/wadpack/runtime` files.
 
 After setup:
 
 ```bash
 sol          # setup/status cockpit
-sol-play     # launch E1M1 with the locked wadpack
-sol-edit     # edit and test with the locked wadpack
+sol-play     # UZDoom loads one sol.pk3 and mounts its embedded stack natively
+sol-edit     # editor authoring + tests use the same bundle contract
 ```
 
 ## Locked resource stack
 
 `sol-project/wadpack.json` defines the exact eighteen-resource load order used by
-SOL. The importer normalizes nested archives into `../vend/wadpack`, records
-hashes, and refuses a launch when a required resource is absent or changed.
+SOL. Wadpack contract 2 preserves positions 1–14 and appends Universal Ambience,
+CosmoAmbience Script edited, Ambient decorations, and TargetSpy v3.1.0 at
+positions 15–18.
 
-Entries 15–18 extend the original Rocket Launcher baseline with Universal
-Ambience, CosmoAmbience Script edited, Ambient decorations, and TargetSpy
-v3.1.0. Their source hashes are locked in the manifest and their order is part
-of wadpack contract 2.
-
-The resource binaries remain local because several components require a full
-redistribution audit. They are not committed to the public repository. The
-v0.1.0 source release therefore defines and enforces the stack without bundling
-third-party payloads.
-
-When the editor is launched with `sol-edit`, the eighteen locked resources are
-added to its in-memory authoring resource list in manifest order. Their textures,
-sprites, actors, and definitions are available while mapping without changing
-the user's normal Ultimate Doom Builder resource configuration.
-
-Editor playtests use this stable test-engine executable automatically:
+Bundle contract 1 adds the SOL-owned components after that stack:
 
 ```text
-tools/sol-editor-engine.sh
+01–18  third-party WAD/PK3 resources
+19     SOL runtime component
+20     SOL E1M1 content component
 ```
 
-`sol-edit` exposes the wrapper through `SOL_EDITOR_TEST_ENGINE`; the SOL editor
-fork temporarily substitutes it for the configured test executable without
-rewriting the user's normal editor settings. The authoring-only injected
-resources are excluded from UDB's generated test arguments, and the wrapper is
-the single runtime injection point for the same locked wadpack and SOL runtime.
-See `docs/sol/wadpack.md`.
+The carrier names inside `sol.pk3` are numbered root-level `.wad` names solely
+to activate UZDoom's existing embedded-resource handling. The bytes inside each
+carrier retain the original normalized WAD or PK3 format.
+
+`sol-play` passes only `sol.pk3` to the engine. The editor still materializes
+entries 1–18 to their original normalized filenames for UDB's authoring-resource
+view, because UDB expects direct resource paths. In-editor playtests pass the
+single `sol.pk3` first and UDB's temporary map afterward, preserving test-map
+precedence.
+
+The same `sol.pk3` is copied into `sol-editor/build/sol`, the editor `Build`
+directory when present, `sol-engine/build/sol`, and the configured engine build
+directory. Local engine builds also install the self-contained `sol-engine`
+launcher beside UZDoom; that launcher loads the adjacent `sol.pk3` by default.
+
+## Attribution and redistribution
+
+`THIRD_PARTY.md` is committed and embedded in `sol.pk3`. The manifest also
+records exact source hashes and known upstream source pages. Universal Ambience,
+Cosmo ambience, Ambient decorations, TargetSpy, FinalCustomDoom, NashGore, and
+Voxel Doom provenance has been expanded from upstream project pages.
+
+Attribution does not itself grant redistribution rights. Several resources still
+need asset-level review, and the HQ PlayStation music/sound effects remain
+local-only proprietary audio. The complete `sol.pk3` is therefore a local-build
+runtime artifact and must not be published as a public SOL binary until the
+third-party audit is complete.
 
 ## Repository layout
 
@@ -76,9 +103,12 @@ See `docs/sol/wadpack.md`.
 - `tools/sol-cockpit.sh`: first-run setup and ongoing MC cockpit.
 - `tools/sol-wadpack.py`: deterministic import, normalization, locking, and verification.
 - `tools/sol-wadpack-setup.sh`: guided wadpack source selector.
-- `tools/sol-editor-engine.sh`: fixed-resource editor test-engine wrapper.
+- `tools/sol-bundle.py`: deterministic `sol.pk3` build, verification, and editor materialization.
+- `tools/sol-bundle.sh`: workspace-level final package builder.
+- `tools/sol-package.sh`: user-facing editor package command for `sol.pk3`.
+- `tools/sol-editor-engine.sh`: native-bundle editor test-engine wrapper.
 - `tools/sol-generate-e1m1.py`: E1M1 UDMF source generator.
-- `sol-project/wadpack.json`: authoritative load order and source hashes.
-- `sol-project/maps/e1m1/`: map budget and layout review artifacts.
+- `sol-project/wadpack.json`: authoritative load order, hashes, and provenance.
+- `THIRD_PARTY.md`: attribution, license-status, and provenance inventory.
 - `docs/sol/`: setup, release, wadpack, and authoring contracts.
 - `branding/sol/`: approved SOL application identity assets.

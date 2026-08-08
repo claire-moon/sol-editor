@@ -12,35 +12,27 @@ set -a
 source "$env_file"
 set +a
 
-workspace=${SOL_WORKSPACE:-$(cd "$root/.." && pwd)}
-vend_root=${SOL_VEND:-${SOL_VEND_ROOT:-"$workspace/vend"}}
 manifest=${SOL_WADPACK_MANIFEST:-"$root/sol-project/wadpack.json"}
-wadpack_tool=(python3 "$root/tools/sol-wadpack.py" --manifest "$manifest" --vend "$vend_root")
+version_file=${SOL_VERSION_FILE:-"$root/sol/version.json"}
+bundle=${SOL_BUNDLE:-"$root/build/sol/sol.pk3"}
+bundle_tool=(python3 "$root/tools/sol-bundle.py")
 
-if [[ ${SOL_SKIP_WADPACK:-0} != 1 ]]; then
-    if ! "${wadpack_tool[@]}" verify >/dev/null; then
-        if [[ -t 0 && -t 1 || ${SOL_COCKPIT_ASSUME_YES:-0} == 1 ]]; then
-            bash "$root/tools/sol-wadpack-setup.sh"
-        else
-            printf 'SOL wadpack is incomplete. Run tools/sol-wadpack-setup.sh.\n' >&2
-            exit 1
-        fi
-    fi
-    mapfile -t wadpack_files < <("${wadpack_tool[@]}" paths)
-else
-    wadpack_files=()
-fi
-runtime_package=$(bash "$SOL_ENGINE_ROOT/tools/sol-package.sh")
+bundle=$(SOL_BUNDLE="$bundle" bash "$root/tools/sol-bundle.sh")
+"${bundle_tool[@]}" verify \
+    --bundle "$bundle" --manifest "$manifest" --version-file "$version_file" \
+    >/dev/null
 
 has_iwad=0
 for argument in "$@"; do
     [[ $argument == -iwad ]] && has_iwad=1
 done
 
-args=(-file "${wadpack_files[@]}" "$runtime_package")
+args=(-file "$bundle")
 if ((has_iwad == 0)); then
     args=(-iwad "$DOOM_IWAD" "${args[@]}")
 fi
 
-# UDB's temporary map and resource arguments follow the locked SOL baseline.
+# UZDoom recursively mounts sol.pk3's numbered native embedded carriers. UDB's
+# temporary map/resource arguments follow the bundle and therefore retain final
+# test-map precedence without duplicating the eighteen authoring resources.
 exec "$SOL_ENGINE" "${args[@]}" "$@"

@@ -18,7 +18,6 @@ if ! load_env; then
 else
     [[ -x ${SOL_ENGINE:-} ]] || needs_setup=1
     [[ -f ${DOOM_IWAD:-} ]] || needs_setup=1
-    [[ -f ${SOL_ENGINE_ROOT:-}/tools/sol-package.sh ]] || needs_setup=1
 fi
 
 if ((needs_setup)); then
@@ -31,37 +30,25 @@ if ((needs_setup)); then
     fi
 fi
 
-workspace=${SOL_WORKSPACE:-$(cd "$root/.." && pwd)}
-vend_root=${SOL_VEND:-${SOL_VEND_ROOT:-"$workspace/vend"}}
 manifest=${SOL_WADPACK_MANIFEST:-"$root/sol-project/wadpack.json"}
-wadpack_tool=(python3 "$root/tools/sol-wadpack.py" --manifest "$manifest" --vend "$vend_root")
+version_file=${SOL_VERSION_FILE:-"$root/sol/version.json"}
+bundle=${SOL_BUNDLE:-"$root/build/sol/sol.pk3"}
+bundle_tool=(python3 "$root/tools/sol-bundle.py")
 
-if [[ ${SOL_SKIP_WADPACK:-0} != 1 ]]; then
-    if ! "${wadpack_tool[@]}" verify >/dev/null; then
-        if [[ -t 0 && -t 1 || ${SOL_COCKPIT_ASSUME_YES:-0} == 1 ]]; then
-            bash "$root/tools/sol-wadpack-setup.sh"
-        else
-            printf 'SOL wadpack is incomplete. Run tools/sol-wadpack-setup.sh.\n' >&2
-            exit 1
-        fi
-    fi
-    mapfile -t wadpack_files < <("${wadpack_tool[@]}" paths)
-else
-    wadpack_files=()
-fi
+# Development checkouts refresh SOL-owned component hashes before play. An
+# installed package with no loose vend tree reuses its verified sol.pk3.
+bundle=$(SOL_BUNDLE="$bundle" bash "$root/tools/sol-bundle.sh")
+"${bundle_tool[@]}" verify \
+    --bundle "$bundle" --manifest "$manifest" --version-file "$version_file" \
+    >/dev/null
 
 map_name=${1:-E1M1}
 if [[ $# -gt 0 ]]; then shift; fi
-runtime_package=$(bash "$SOL_ENGINE_ROOT/tools/sol-package.sh")
-if [[ ! -f $runtime_package ]]; then
-    printf 'SOL runtime package was not produced: %s\n' "$runtime_package" >&2
-    exit 1
-fi
-content_package=$(bash "$root/tools/sol-build.sh")
 
-# Third-party resources load first in the locked Rocket Launcher order. SOL
-# runtime and map content load last so project-owned fixes can override them.
+# UZDoom natively recognizes the numbered root-level *.wad carrier members in
+# sol.pk3 as embedded resource files. Their bytes remain the original WAD/PK3
+# archives, so the engine recursively mounts 01 through 20 in lexical order.
 exec "$SOL_ENGINE" \
     -iwad "$DOOM_IWAD" \
-    -file "${wadpack_files[@]}" "$runtime_package" "$content_package" \
+    -file "$bundle" \
     +map "$map_name" "$@"

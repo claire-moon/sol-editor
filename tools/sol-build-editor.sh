@@ -10,6 +10,9 @@ build_type=${SOL_EDITOR_BUILD_TYPE:-Release}
 usage() {
     cat <<'USAGE'
 Usage: tools/sol-build-editor.sh [--detect] [--install-deps] [--clean]
+
+Build or locate SOL Editor. When the complete local SOL wadpack is available,
+also refresh sol.pk3 and copy it into the editor Build directory.
 USAGE
 }
 
@@ -92,4 +95,10 @@ editor=$(find_editor) || {
     printf 'sol-editor build did not produce Build/builder.\n' >&2
     exit 1
 }
+
+if [[ -f $root/tools/sol-bundle.sh ]]; then
+    SOL_EDITOR="$editor" SOL_EDITOR_ROOT="$root" SOL_BUNDLE_NO_SETUP=1 \
+        bash "$root/tools/sol-bundle.sh" >/dev/null 2>&1 || true
+fi
+
 printf '%s\n' "$editor"

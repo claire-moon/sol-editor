@@ -15,6 +15,9 @@ usage() {
 Usage: tools/sol-build-engine.sh [--detect] [--install-deps] [--clean]
 
 Build or locate the executable produced by the sibling sol-engine checkout.
+When the complete local SOL wadpack is available, also refresh sol.pk3 and copy
+it beside the engine executable. The self-contained `sol-engine` launcher is
+installed beside the UZDoom binary on every successful local build.
 USAGE
 }
 
@@ -52,7 +55,7 @@ find_engine() {
         fi
     done
     candidate=$(find "$engine_root/build" -maxdepth 4 -type f \
-        \( -name uzdoom -o -name sol-engine -o -name 'UZDoom*.AppImage' \) \
+        \( -name uzdoom -o -name 'UZDoom*.AppImage' \) \
         -perm -111 -print -quit 2>/dev/null || true)
     if [[ -n $candidate ]]; then
         realpath "$candidate"
@@ -128,4 +131,20 @@ engine=$(find_engine) || {
     printf 'sol-engine built without producing a detectable executable.\n' >&2
     exit 1
 }
+engine_dir=$(dirname "$engine")
+if [[ -f $engine_root/tools/sol-launcher.sh ]]; then
+    install -m 0755 "$engine_root/tools/sol-launcher.sh" "$engine_dir/sol-engine"
+fi
+
+# Packaging must never turn a successful compile into a failure while the local
+# third-party build inputs are still being collected. Once they are complete,
+# this places the canonical bundle beside the executable automatically.
+if [[ -f $editor_root/tools/sol-bundle.sh ]]; then
+    SOL_ENGINE="$engine" \
+    SOL_ENGINE_ROOT="$engine_root" \
+    SOL_EDITOR_ROOT="$editor_root" \
+    SOL_BUNDLE_NO_SETUP=1 \
+        bash "$editor_root/tools/sol-bundle.sh" >/dev/null 2>&1 || true
+fi
+
 printf '%s\n' "$engine"

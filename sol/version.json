@@ -7,6 +7,8 @@
   "map_format": "UDMF",
   "wadpack_contract": 2,
   "wadpack_entries": 18,
+  "bundle_contract": 1,
+  "bundle_name": "sol.pk3",
   "doomtools": {
     "repository": "https://github.com/MTrop/DoomTools.git",
     "commit": "b2590d80918c02c9605c5338e31eaa98a2089e5f"
