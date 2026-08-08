@@ -30,20 +30,37 @@ if [[ ! -f $runtime_builder ]]; then
     exit 1
 fi
 
+copy_bundle() {
+    local destination=$1
+    mkdir -p "$(dirname "$destination")"
+    if [[ $(realpath -m "$bundle") != $(realpath -m "$destination") ]]; then
+        cp -f "$bundle" "$destination"
+    fi
+}
+
+install_bundle_copies() {
+    copy_bundle "$engine_root/build/sol/sol.pk3"
+    if [[ -d $engine_root/build/sol-local ]]; then
+        copy_bundle "$engine_root/build/sol-local/sol.pk3"
+    fi
+    if [[ -n ${SOL_ENGINE:-} && -f ${SOL_ENGINE:-} ]]; then
+        copy_bundle "$(dirname "$(realpath "$SOL_ENGINE")")/sol.pk3"
+    fi
+    if [[ -d $root/Build ]]; then
+        copy_bundle "$root/Build/sol.pk3"
+    fi
+    if [[ -n ${SOL_EDITOR:-} && -f ${SOL_EDITOR:-} ]]; then
+        copy_bundle "$(dirname "$(realpath "$SOL_EDITOR")")/sol.pk3"
+    fi
+}
+
 # A valid existing sol.pk3 is a self-contained runtime. This permits installed
 # packages to run after their build-time vend directory has been removed.
 if [[ -f $bundle && ${SOL_FORCE_BUNDLE_REFRESH:-0} != 1 ]]; then
     if "${bundle_tool[@]}" verify \
         --bundle "$bundle" --manifest "$manifest" --version-file "$version_file" \
         >/dev/null 2>&1; then
-        mkdir -p "$engine_root/build/sol"
-        cp -f "$bundle" "$engine_root/build/sol/sol.pk3"
-        if [[ -d $engine_root/build/sol-local ]]; then
-            cp -f "$bundle" "$engine_root/build/sol-local/sol.pk3"
-        fi
-        if [[ -d $root/Build ]]; then
-            cp -f "$bundle" "$root/Build/sol.pk3"
-        fi
+        install_bundle_copies
         printf '%s\n' "$bundle"
         exit 0
     fi
@@ -75,13 +92,5 @@ content_package=${SOL_CONTENT_COMPONENT:-$(bash "$root/tools/sol-build.sh")}
     --output "$bundle" \
     >/dev/null
 
-mkdir -p "$engine_root/build/sol"
-cp -f "$bundle" "$engine_root/build/sol/sol.pk3"
-if [[ -d $engine_root/build/sol-local ]]; then
-    cp -f "$bundle" "$engine_root/build/sol-local/sol.pk3"
-fi
-if [[ -d $root/Build ]]; then
-    cp -f "$bundle" "$root/Build/sol.pk3"
-fi
-
+install_bundle_copies
 printf '%s\n' "$bundle"
