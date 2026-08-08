@@ -7,7 +7,7 @@ test launches against the locally built `sol-engine` fork.
 ## Current release
 
 `v0.1.0` establishes the deterministic E1M1 graybox, classic Doom progression,
-shared SOL branding, guided local setup, and the fourteen-resource locked
+shared SOL branding, guided local setup, and the eighteen-resource locked
 visual/audio contract used by both authoring and test launches.
 
 ## First run
@@ -38,17 +38,21 @@ sol-edit     # edit and test with the locked wadpack
 
 ## Locked resource stack
 
-`sol-project/wadpack.json` defines the exact fourteen-resource load order copied
-from the approved Rocket Launcher configuration. The importer normalizes nested
-archives into `../vend/wadpack`, records hashes, and refuses a launch when a
-required resource is absent or changed.
+`sol-project/wadpack.json` defines the exact eighteen-resource load order used by
+SOL. The importer normalizes nested archives into `../vend/wadpack`, records
+hashes, and refuses a launch when a required resource is absent or changed.
+
+Entries 15–18 extend the original Rocket Launcher baseline with Universal
+Ambience, CosmoAmbience Script edited, Ambient decorations, and TargetSpy
+v3.1.0. Their source hashes are locked in the manifest and their order is part
+of wadpack contract 2.
 
 The resource binaries remain local because several components require a full
 redistribution audit. They are not committed to the public repository. The
 v0.1.0 source release therefore defines and enforces the stack without bundling
 third-party payloads.
 
-When the editor is launched with `sol-edit`, the fourteen locked resources are
+When the editor is launched with `sol-edit`, the eighteen locked resources are
 added to its in-memory authoring resource list in manifest order. Their textures,
 sprites, actors, and definitions are available while mapping without changing
 the user's normal Ultimate Doom Builder resource configuration.

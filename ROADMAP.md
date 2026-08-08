@@ -3,11 +3,15 @@
 ## Completed
 
 - `v0.0.1`: repository foundation, pinned DoomTools, shared launch contract, package validation.
-- `v0.1.0`: deterministic E1M1 graybox, classic Doom episode progression contract, Midnight Commander setup cockpit, shared SOL branding, fourteen-resource locked wadpack tooling, editor authoring-resource injection, strict editor test-engine wrapper, and green Linux/Windows/Flatpak/SOL CI.
+- `v0.1.0`: deterministic E1M1 graybox, classic Doom episode progression contract, Midnight Commander setup cockpit, shared SOL branding, eighteen-resource locked wadpack tooling under contract 2, editor authoring-resource injection, strict editor test-engine wrapper, and green Linux/Windows/Flatpak/SOL CI.
 
 The v0.1.0 source release does not redistribute the third-party wadpack. Local
-play is intentionally blocked until all fourteen required resources are present
+play is intentionally blocked until all eighteen required resources are present
 and verified under `vend/wadpack`; HQ PSX music remains a local deployment input.
+
+The original fourteen-resource baseline remains positions 1–14. Wadpack contract
+2 appends Universal Ambience, CosmoAmbience Script edited, Ambient decorations,
+and TargetSpy v3.1.0 in positions 15–18.
 
 ## Active — Phase 2: Story Authoring (`v0.2.0`)
 
