@@ -20,11 +20,7 @@ bundle_tool=(python3 "$root/tools/sol-bundle.py")
 resources_file="$root/sol-project/.udb/sol-wadpack.resources.txt"
 mkdir -p "$root/sol-project/.udb"
 
-if ! "${bundle_tool[@]}" verify \
-    --bundle "$bundle" --manifest "$manifest" --version-file "$version_file" \
-    >/dev/null 2>&1; then
-    bundle=$(SOL_BUNDLE="$bundle" bash "$root/tools/sol-bundle.sh")
-fi
+bundle=$(SOL_BUNDLE="$bundle" bash "$root/tools/sol-bundle.sh")
 "${bundle_tool[@]}" materialize \
     --bundle "$bundle" --directory "$cache" --scope wadpack \
     --manifest "$manifest" --version-file "$version_file" \
