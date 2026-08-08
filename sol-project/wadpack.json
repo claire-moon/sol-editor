@@ -148,6 +148,46 @@
       "transform": {"type": "copy"},
       "distribution": "review-required",
       "required": true
+    },
+    {
+      "id": "universal-ambience",
+      "display_name": "Universal Ambience",
+      "source_names": ["1 Universal Ambience.pk3", "Universal Ambience.pk3"],
+      "source_sha256": ["b739009ac26576f028bb833985b44b375213563bdc8e8c8bd3f2ee182fdd0e35"],
+      "runtime_name": "15-universal-ambience.pk3",
+      "transform": {"type": "copy"},
+      "distribution": "review-required",
+      "required": true
+    },
+    {
+      "id": "cosmoambience-script-edited",
+      "display_name": "CosmoAmbience Script edited",
+      "source_names": ["2 CosmoAmbience Script edited.pk3", "CosmoAmbience Script edited.pk3"],
+      "source_sha256": ["b1dc50a069433e2fa5feb6aa63d45ffb9e4c2a8989389fc026e0b44b01e01d36"],
+      "runtime_name": "16-cosmoambience-script-edited.pk3",
+      "transform": {"type": "copy"},
+      "distribution": "review-required",
+      "required": true
+    },
+    {
+      "id": "ambient-decorations",
+      "display_name": "Ambient decorations",
+      "source_names": ["3 Ambient decorations.pk3", "Ambient decorations.pk3"],
+      "source_sha256": ["96b652aea1883c38e22797578280804f8a4557c7aa5c48cacdba45351413eb8b"],
+      "runtime_name": "17-ambient-decorations.pk3",
+      "transform": {"type": "copy"},
+      "distribution": "review-required",
+      "required": true
+    },
+    {
+      "id": "targetspy",
+      "display_name": "TargetSpy v3.1.0",
+      "source_names": ["TargetSpy-v3.1.0.pk3"],
+      "source_sha256": ["6cdafe4af382f76071150a9c4f39b61597f22cf7098a02837cc1b6a81808e128"],
+      "runtime_name": "18-targetspy-v3.1.0.pk3",
+      "transform": {"type": "copy"},
+      "distribution": "GPL-3.0-only",
+      "required": true
     }
   ]
 }
