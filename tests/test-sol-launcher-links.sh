@@ -72,6 +72,7 @@ export SOL_WADPACK_MANIFEST='$tmp/manifest.json'
 export SOL_VERSION_FILE='$tmp/version.json'
 export SOL_THIRD_PARTY_FILE='$tmp/THIRD_PARTY.md'
 export SOL_BUNDLE='$tmp/sol.pk3'
+export SOL_BUNDLE_REUSE='1'
 export DOOM_IWAD='$tmp/doom.wad'
 ENV
 
