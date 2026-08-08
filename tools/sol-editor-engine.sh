@@ -18,11 +18,7 @@ bundle=${SOL_BUNDLE:-"$root/build/sol/sol.pk3"}
 cache=${SOL_BUNDLE_CACHE:-"$root/build/sol/materialized"}
 bundle_tool=(python3 "$root/tools/sol-bundle.py")
 
-if ! "${bundle_tool[@]}" verify \
-    --bundle "$bundle" --manifest "$manifest" --version-file "$version_file" \
-    >/dev/null 2>&1; then
-    bundle=$(SOL_BUNDLE="$bundle" bash "$root/tools/sol-bundle.sh")
-fi
+bundle=$(SOL_BUNDLE="$bundle" bash "$root/tools/sol-bundle.sh")
 mapfile -t engine_files < <("${bundle_tool[@]}" materialize \
     --bundle "$bundle" --directory "$cache" --scope engine \
     --manifest "$manifest" --version-file "$version_file")
