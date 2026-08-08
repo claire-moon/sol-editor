@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+source_path=${BASH_SOURCE[0]}
+while [[ -L $source_path ]]; do
+    source_dir=$(cd -P "$(dirname "$source_path")" && pwd)
+    source_path=$(readlink "$source_path")
+    if [[ $source_path != /* ]]; then
+        source_path="$source_dir/$source_path"
+    fi
+done
+script_dir=$(cd -P "$(dirname "$source_path")" && pwd)
+exec bash "$script_dir/sol-bundle.sh" "$@"
