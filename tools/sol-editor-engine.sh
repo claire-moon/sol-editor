@@ -15,25 +15,24 @@ set +a
 manifest=${SOL_WADPACK_MANIFEST:-"$root/sol-project/wadpack.json"}
 version_file=${SOL_VERSION_FILE:-"$root/sol/version.json"}
 bundle=${SOL_BUNDLE:-"$root/build/sol/sol.pk3"}
-cache=${SOL_BUNDLE_CACHE:-"$root/build/sol/materialized"}
 bundle_tool=(python3 "$root/tools/sol-bundle.py")
 
 bundle=$(SOL_BUNDLE="$bundle" bash "$root/tools/sol-bundle.sh")
-mapfile -t engine_files < <("${bundle_tool[@]}" materialize \
-    --bundle "$bundle" --directory "$cache" --scope engine \
-    --manifest "$manifest" --version-file "$version_file")
+"${bundle_tool[@]}" verify \
+    --bundle "$bundle" --manifest "$manifest" --version-file "$version_file" \
+    >/dev/null
 
 has_iwad=0
 for argument in "$@"; do
     [[ $argument == -iwad ]] && has_iwad=1
 done
 
-args=(-file "${engine_files[@]}")
+args=(-file "$bundle")
 if ((has_iwad == 0)); then
     args=(-iwad "$DOOM_IWAD" "${args[@]}")
 fi
 
-# UDB's temporary map/resource arguments follow the eighteen embedded wadpack
-# resources and SOL runtime component materialized from sol.pk3. The packaged
-# E1M1 content component is intentionally omitted so UDB's temporary map wins.
+# UZDoom recursively mounts sol.pk3's numbered native embedded carriers. UDB's
+# temporary map/resource arguments follow the bundle and therefore retain final
+# test-map precedence without duplicating the eighteen authoring resources.
 exec "$SOL_ENGINE" "${args[@]}" "$@"
