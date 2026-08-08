@@ -15,6 +15,8 @@ usage() {
 Usage: tools/sol-build-engine.sh [--detect] [--install-deps] [--clean]
 
 Build or locate the executable produced by the sibling sol-engine checkout.
+When the complete local SOL wadpack is available, also refresh sol.pk3 and copy
+it beside the engine executable.
 USAGE
 }
 
@@ -128,4 +130,16 @@ engine=$(find_engine) || {
     printf 'sol-engine built without producing a detectable executable.\n' >&2
     exit 1
 }
+
+# Packaging must never turn a successful compile into a failure while the local
+# third-party build inputs are still being collected. Once they are complete,
+# this places the canonical bundle beside the executable automatically.
+if [[ -f $editor_root/tools/sol-bundle.sh ]]; then
+    SOL_ENGINE="$engine" \
+    SOL_ENGINE_ROOT="$engine_root" \
+    SOL_EDITOR_ROOT="$editor_root" \
+    SOL_BUNDLE_NO_SETUP=1 \
+        bash "$editor_root/tools/sol-bundle.sh" >/dev/null 2>&1 || true
+fi
+
 printf '%s\n' "$engine"
