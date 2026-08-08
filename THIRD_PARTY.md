@@ -1,8 +1,9 @@
 # SOL third-party resources
 
 SOL uses third-party Doom resources as part of its presentation baseline. The
-canonical order, exact source hashes, normalization rules, and known source
-pages are recorded in `sol-project/wadpack.json`.
+canonical order, source-hash policy, normalization rules, and known source pages
+are recorded in `sol-project/wadpack.json`. Exact hashes for unpinned local source
+packages are captured in `vend/wadpack/lock.json` during import.
 
 The generated `sol.pk3` preserves each normalized third-party WAD/PK3 byte-for-
 byte inside a numbered native UZDoom embedded-resource carrier. License/readme
@@ -35,8 +36,25 @@ notice/source obligations are satisfied.
 | 16 | CosmoAmbience Script edited | `16-cosmoambience-script-edited.pk3` | upstream Universal Ambience distribution lists GPL; this supplied copy is an edited variant and its local changes/source obligations must remain documented |
 | 17 | Ambient decorations | `17-ambient-decorations.pk3` | distribution page lists GPL; third-party audio sources still require asset-level review |
 | 18 | TargetSpy v3.1.0 | `18-targetspy-v3.1.0.pk3` | GPL-3.0-only, © 2026 Alexander Kromm (mmaulwurff) |
+| 19 | Precise Crosshair v1.5.0 | `19-precise-crosshair-v1.5.0.pk3` | GPL-3.0-only, © 2019 Alexander Kromm (mmaulwurff); supplied package SHA-256 is locked locally on import |
 
 ## Recorded upstream credits
+
+### Precise Crosshair v1.5.0
+
+Source: https://github.com/mmaulwurff/doom-toolbox/blob/main/add-ons/PreciseCrosshair.org
+
+The upstream DoomToolbox source identifies `old_version` 1.5.0, includes the
+v1.5.0 changelog, and declares:
+
+```text
+SPDX-FileCopyrightText: © 2019 Alexander Kromm (m8f) <mmaulwurff@gmail.com>
+SPDX-License-Identifier: GPL-3.0-only
+```
+
+SOL does not commit the third-party PK3. The manifest accepts the user-supplied
+v1.5.0 archive and the importer records its exact source and normalized runtime
+SHA-256 values in the local lock before packaging.
 
 ### Universal Ambience / Cosmo ambience / Ambient decorations
 
@@ -113,18 +131,19 @@ sol.pk3
 ├── 02-universal-weapon-sway.wad
 ├── ...
 ├── 18-targetspy.wad
-├── 19-sol-runtime.wad
-└── 20-sol-content.wad
+├── 19-precise-crosshair.wad
+├── 20-sol-runtime.wad
+└── 21-sol-content.wad
 ```
 
 The `.wad` suffixes above are **carrier names**, not format conversions. Each
 carrier contains the original normalized WAD/PK3 bytes. UZDoom identifies
 root-level `.wad` members as embedded resources, opens each member by its actual
 file contents, and recursively mounts them in lexical order. This allows the
-engine to load only `sol.pk3` while preserving the same 01→20 resource
+engine to load only `sol.pk3` while preserving the same 01→21 resource
 precedence as separate archives.
 
-The editor may materialize entries 1–18 back to their original normalized
+The editor may materialize entries 1–19 back to their original normalized
 filenames for authoring-resource inspection. Gameplay and editor playtests do
 not need that extraction path; UZDoom mounts the embedded carriers natively.
 

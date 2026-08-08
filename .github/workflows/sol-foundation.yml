@@ -66,30 +66,33 @@ jobs:
               wadpack = json.load(f)
           assert version['version'] == '0.1.0'
           assert version['engine_contract'] == '0.1.0'
-          assert version['wadpack_contract'] == 2
-          assert version['wadpack_entries'] == 18
+          assert version['wadpack_contract'] == 3
+          assert version['wadpack_entries'] == 19
           assert version['bundle_contract'] == 1
           assert version['bundle_name'] == 'sol.pk3'
           assert project['version'] == '0.1.0'
           assert project['engine_package'] == 'sol-e1m1-v0.1.0.pk3'
-          assert project['wadpack_contract'] == 2
+          assert project['wadpack_contract'] == 3
           assert project['bundle_contract'] == 1
           assert project['runtime_bundle'] == 'sol.pk3'
           assert wadpack['version'] == '0.1.0'
-          assert len(wadpack['load_order']) == 18
-          tail = wadpack['load_order'][-4:]
+          assert len(wadpack['load_order']) == 19
+          tail = wadpack['load_order'][-5:]
           assert [item['id'] for item in tail] == [
               'universal-ambience',
               'cosmoambience-script-edited',
               'ambient-decorations',
               'targetspy',
+              'precise-crosshair',
           ]
           assert [item['runtime_name'] for item in tail] == [
               '15-universal-ambience.pk3',
               '16-cosmoambience-script-edited.pk3',
               '17-ambient-decorations.pk3',
               '18-targetspy-v3.1.0.pk3',
+              '19-precise-crosshair-v1.5.0.pk3',
           ]
+          assert wadpack['load_order'][-1]['source_sha256'] == []
           PY
           test -s THIRD_PARTY.md
           grep -F 'local-build runtime artifact' THIRD_PARTY.md

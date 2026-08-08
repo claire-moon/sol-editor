@@ -5,8 +5,8 @@
   "engine_contract": "0.1.0",
   "map": "E1M1",
   "map_format": "UDMF",
-  "wadpack_contract": 2,
-  "wadpack_entries": 18,
+  "wadpack_contract": 3,
+  "wadpack_entries": 19,
   "bundle_contract": 1,
   "bundle_name": "sol.pk3",
   "doomtools": {

@@ -10,5 +10,5 @@
   "runtime_bundle": "sol.pk3",
   "bundle_contract": 1,
   "monster_profile": "standard-graybox",
-  "wadpack_contract": 2
+  "wadpack_contract": 3
 }

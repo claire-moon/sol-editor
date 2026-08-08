@@ -197,6 +197,18 @@
       "source_page": "https://mmaulwurff.github.io/doom-toolbox/add-ons/TargetSpy.html",
       "credits": ["Alexander Kromm (mmaulwurff)"],
       "required": true
+    },
+    {
+      "id": "precise-crosshair",
+      "display_name": "Precise Crosshair v1.5.0",
+      "source_names": ["PreciseCrosshair-v1.5.0.pk3", "PreciseCrosshair-1.5.0.pk3", "PreciseCrosshair.pk3"],
+      "source_sha256": [],
+      "runtime_name": "19-precise-crosshair-v1.5.0.pk3",
+      "transform": {"type": "copy"},
+      "distribution": "GPL-3.0-only",
+      "source_page": "https://github.com/mmaulwurff/doom-toolbox/blob/main/add-ons/PreciseCrosshair.org",
+      "credits": ["Alexander Kromm (mmaulwurff)"],
+      "required": true
     }
   ]
 }
