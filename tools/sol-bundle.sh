@@ -56,15 +56,14 @@ if "${wadpack_tool[@]}" verify >/dev/null 2>&1; then
     wadpack_ready=1
 fi
 
-# Explicit reuse is useful for installed/test packages that should never touch
-# build inputs. Otherwise, a complete development wadpack always regenerates
-# sol.pk3 so current SOL runtime/map source cannot be hidden by a stale bundle.
+# Installed packages can explicitly pin a verified bundle without any build-time
+# source tree. With no loose wadpack available, a valid bundle is automatically
+# treated as the complete self-contained runtime.
 if ((bundle_valid)) && [[ ${SOL_BUNDLE_REUSE:-0} == 1 ]]; then
     install_bundle_copies
     printf '%s\n' "$bundle"
     exit 0
 fi
-
 if ((wadpack_ready == 0)); then
     if ((bundle_valid)); then
         install_bundle_copies
@@ -96,8 +95,22 @@ if [[ ! -f $runtime_builder ]]; then
     exit 1
 fi
 
+# These SOL-owned component packages are small. Rebuilding them lets us compare
+# exact hashes with SOLPACK.json and avoids rewriting the much larger sol.pk3
+# unless runtime/map/attribution content actually changed.
 runtime_package=${SOL_RUNTIME_COMPONENT:-$(bash "$runtime_builder")}
 content_package=${SOL_CONTENT_COMPONENT:-$(bash "$root/tools/sol-build.sh")}
+
+if ((bundle_valid)) && [[ ${SOL_FORCE_BUNDLE_REFRESH:-0} != 1 ]]; then
+    if "${bundle_tool[@]}" verify \
+        --bundle "$bundle" --manifest "$manifest" --version-file "$version_file" \
+        --runtime "$runtime_package" --content "$content_package" --credits "$credits" \
+        >/dev/null 2>&1; then
+        install_bundle_copies
+        printf '%s\n' "$bundle"
+        exit 0
+    fi
+fi
 
 "${bundle_tool[@]}" build \
     --manifest "$manifest" \
