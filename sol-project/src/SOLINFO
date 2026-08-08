@@ -1,7 +1,9 @@
-SOL v0.1.0 graybox release
+SOL v0.2.0 story-authoring foundation
 Map: E1M1 — Hangar: Arrival
 Format: UDMF
 Zones: 14
 Monsters: 176 staged graybox placements
-Wadpack contract: 14 locked resources
+Wadpack contract: 2 / 18 locked resources
+Bundle contract: 1 / sol.pk3
+Story contract: 1
 Generated source: tools/sol-generate-e1m1.py

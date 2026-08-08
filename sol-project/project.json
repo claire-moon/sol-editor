@@ -1,14 +1,16 @@
 {
   "name": "SOL",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "map": "E1M1",
   "format": "UDMF",
   "namespace": "ZDoom",
   "source": "tools/sol-generate-e1m1.py",
   "artifact": "build/sol/generated/e1m1/E1M1.wad",
-  "engine_package": "sol-e1m1-v0.1.0.pk3",
+  "engine_package": "sol-e1m1-v0.2.0.pk3",
   "runtime_bundle": "sol.pk3",
   "bundle_contract": 1,
+  "story_contract": 1,
+  "story_manifest": "sol-project/story/story.json",
   "monster_profile": "standard-graybox",
   "wadpack_contract": 2
 }

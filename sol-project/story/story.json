@@ -1,0 +1,9 @@
+{
+  "contract": 1,
+  "map": "E1M1",
+  "id_policy": "IDs are stable and append-only within each story namespace once assigned.",
+  "events": [],
+  "objectives": [],
+  "subtitles": [],
+  "radio": []
+}
