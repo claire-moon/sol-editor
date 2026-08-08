@@ -10,6 +10,18 @@ test launches against the locally built `sol-engine` fork.
 shared SOL branding, guided local setup, and the eighteen-resource locked
 visual/audio contract used by both authoring and test launches.
 
+The physical SOL runtime payload is now one file:
+
+```text
+sol.pk3
+```
+
+`sol.pk3` contains the eighteen normalized WAD/PK3 resources as intact embedded
+archives, the SOL-owned engine runtime component, the current E1M1 content
+component, `SOLPACK.json`, and `THIRD_PARTY.md`. The embedded archives are kept
+separate inside the container so conflicting root resources in different mods
+retain the same behavior and precedence they have when loaded individually.
+
 ## First run
 
 ```text
@@ -22,53 +34,60 @@ sol/
 ```bash
 cd sol-editor
 bash tools/sol-cockpit.sh
+bash tools/sol-wadpack-setup.sh
+bash tools/sol-package.sh
 ```
 
-The cockpit configures the sibling repositories and a user-owned IWAD. The first
-play or editor launch then opens the locked wadpack importer when the required
-visual/audio stack is incomplete.
+`vend/wadpack` is the build-time source for the locked third-party resources.
+Once a valid `sol.pk3` has been generated, normal SOL launches can materialize
+all required runtime components from that single file without depending on the
+loose `vend/wadpack/runtime` files.
 
 After setup:
 
 ```bash
 sol          # setup/status cockpit
-sol-play     # launch E1M1 with the locked wadpack
-sol-edit     # edit and test with the locked wadpack
+sol-play     # launch E1M1 from sol.pk3
+sol-edit     # edit and test using resources materialized from sol.pk3
 ```
 
 ## Locked resource stack
 
 `sol-project/wadpack.json` defines the exact eighteen-resource load order used by
-SOL. The importer normalizes nested archives into `../vend/wadpack`, records
-hashes, and refuses a launch when a required resource is absent or changed.
+SOL. The importer normalizes source archives into `../vend/wadpack` and records
+source/runtime hashes. Wadpack contract 2 preserves the original positions 1–14
+and appends Universal Ambience, CosmoAmbience Script edited, Ambient decorations,
+and TargetSpy v3.1.0 at positions 15–18.
 
-Entries 15–18 extend the original Rocket Launcher baseline with Universal
-Ambience, CosmoAmbience Script edited, Ambient decorations, and TargetSpy
-v3.1.0. Their source hashes are locked in the manifest and their order is part
-of wadpack contract 2.
-
-The resource binaries remain local because several components require a full
-redistribution audit. They are not committed to the public repository. The
-v0.1.0 source release therefore defines and enforces the stack without bundling
-third-party payloads.
-
-When the editor is launched with `sol-edit`, the eighteen locked resources are
-added to its in-memory authoring resource list in manifest order. Their textures,
-sprites, actors, and definitions are available while mapping without changing
-the user's normal Ultimate Doom Builder resource configuration.
-
-Editor playtests use this stable test-engine executable automatically:
+`tools/sol-bundle.py` verifies the locked runtime files and creates bundle
+contract 1. The bundle contains these ordered components:
 
 ```text
-tools/sol-editor-engine.sh
+01–18  third-party WAD/PK3 resources
+19     SOL runtime component
+20     SOL E1M1 content component
 ```
 
-`sol-edit` exposes the wrapper through `SOL_EDITOR_TEST_ENGINE`; the SOL editor
-fork temporarily substitutes it for the configured test executable without
-rewriting the user's normal editor settings. The authoring-only injected
-resources are excluded from UDB's generated test arguments, and the wrapper is
-the single runtime injection point for the same locked wadpack and SOL runtime.
-See `docs/sol/wadpack.md`.
+`sol-play` materializes all twenty components from `sol.pk3` and mounts them in
+that exact order. `sol-edit` materializes entries 1–18 for authoring, while its
+editor test wrapper materializes entries 1–19 and lets UDB's temporary map follow
+them on the command line.
+
+The same `sol.pk3` is copied into `sol-editor/build/sol`, the editor `Build`
+directory when present, `sol-engine/build/sol`, and the configured local engine
+build directory. This makes the bundle part of both local package outputs.
+
+## Attribution and redistribution
+
+`THIRD_PARTY.md` is committed in the repository and is also embedded inside
+`sol.pk3`. Each normalized upstream archive remains intact, preserving any
+license/readme files it contains.
+
+Attribution does not itself grant redistribution rights. Several resources are
+still recorded as `review-required`, and the HQ PlayStation music/sound effects
+are recorded as local-only proprietary audio. For that reason `sol.pk3` is
+currently a local-build runtime artifact and must not be published or committed
+as a public release binary until the third-party audit is complete.
 
 ## Repository layout
 
@@ -76,9 +95,12 @@ See `docs/sol/wadpack.md`.
 - `tools/sol-cockpit.sh`: first-run setup and ongoing MC cockpit.
 - `tools/sol-wadpack.py`: deterministic import, normalization, locking, and verification.
 - `tools/sol-wadpack-setup.sh`: guided wadpack source selector.
+- `tools/sol-bundle.py`: deterministic `sol.pk3` build, verification, and materialization.
+- `tools/sol-bundle.sh`: workspace-level final package builder.
+- `tools/sol-package.sh`: user-facing editor package command for `sol.pk3`.
 - `tools/sol-editor-engine.sh`: fixed-resource editor test-engine wrapper.
 - `tools/sol-generate-e1m1.py`: E1M1 UDMF source generator.
 - `sol-project/wadpack.json`: authoritative load order and source hashes.
-- `sol-project/maps/e1m1/`: map budget and layout review artifacts.
+- `THIRD_PARTY.md`: attribution, license-status, and provenance inventory.
 - `docs/sol/`: setup, release, wadpack, and authoring contracts.
 - `branding/sol/`: approved SOL application identity assets.
