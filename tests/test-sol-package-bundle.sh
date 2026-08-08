@@ -73,6 +73,16 @@ python3 "$root/tools/sol-bundle.py" verify \
     --runtime "$tmp/runtime.pk3" --content "$tmp/content.pk3" \
     --credits "$tmp/THIRD_PARTY.md" >/dev/null
 
+python3 - "$bundle" <<'PY'
+import json, sys, zipfile
+with zipfile.ZipFile(sys.argv[1]) as zf:
+    data = json.loads(zf.read('SOLPACK.json'))
+    assert data['native_embedding'] == 'uzdoom-root-wad-carriers'
+    assert [c['archive'] for c in data['components']] == [
+        '01-one.wad', '02-two.wad', '03-sol-runtime.wad', '04-sol-content.wad'
+    ]
+PY
+
 # Prove vend is a build input rather than a packaged-runtime dependency.
 rm -rf "$tmp/vend"
 reused=$(env \
@@ -88,13 +98,15 @@ reused=$(env \
     bash "$root/tools/sol-bundle.sh")
 test "$reused" = "$bundle"
 
+# Materialization remains available for editor authoring, but gameplay can pass
+# only sol.pk3 because UZDoom recursively mounts the root-level *.wad carriers.
 mapfile -t paths < <(python3 "$root/tools/sol-bundle.py" materialize \
     --bundle "$bundle" --directory "$tmp/materialized" --scope all \
     --manifest "$tmp/manifest.json" --version-file "$tmp/version.json")
 test ${#paths[@]} -eq 4
 [[ ${paths[0]} == */01-one.pk3 ]]
 [[ ${paths[1]} == */02-two.wad ]]
-[[ ${paths[2]} == */19-sol-runtime.pk3 ]]
-[[ ${paths[3]} == */20-sol-content.pk3 ]]
+[[ ${paths[2]} == */runtime.pk3 ]]
+[[ ${paths[3]} == */content.pk3 ]]
 
-printf 'self-contained SOL package deployment tests passed\n'
+printf 'self-contained native SOL package deployment tests passed\n'
