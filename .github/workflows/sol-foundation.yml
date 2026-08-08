@@ -63,13 +63,26 @@ jobs:
               wadpack = json.load(f)
           assert version['version'] == '0.1.0'
           assert version['engine_contract'] == '0.1.0'
-          assert version['wadpack_contract'] == 1
-          assert version['wadpack_entries'] == 14
+          assert version['wadpack_contract'] == 2
+          assert version['wadpack_entries'] == 18
           assert project['version'] == '0.1.0'
           assert project['engine_package'] == 'sol-e1m1-v0.1.0.pk3'
-          assert project['wadpack_contract'] == 1
+          assert project['wadpack_contract'] == 2
           assert wadpack['version'] == '0.1.0'
-          assert len(wadpack['load_order']) == 14
+          assert len(wadpack['load_order']) == 18
+          tail = wadpack['load_order'][-4:]
+          assert [item['id'] for item in tail] == [
+              'universal-ambience',
+              'cosmoambience-script-edited',
+              'ambient-decorations',
+              'targetspy',
+          ]
+          assert [item['runtime_name'] for item in tail] == [
+              '15-universal-ambience.pk3',
+              '16-cosmoambience-script-edited.pk3',
+              '17-ambient-decorations.pk3',
+              '18-targetspy-v3.1.0.pk3',
+          ]
           PY
       - name: Verify setup, cockpit, wadpack, and launchers
         run: |
