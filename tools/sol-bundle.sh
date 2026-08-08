@@ -20,16 +20,6 @@ bundle=${SOL_BUNDLE:-"$root/build/sol/sol.pk3"}
 bundle_tool=(python3 "$root/tools/sol-bundle.py")
 wadpack_tool=(python3 "$root/tools/sol-wadpack.py" --manifest "$manifest" --vend "$vend_root")
 
-runtime_builder="$engine_root/tools/sol-package.sh"
-if [[ -f $engine_root/tools/sol-runtime-package.sh ]]; then
-    runtime_builder="$engine_root/tools/sol-runtime-package.sh"
-fi
-
-if [[ ! -f $runtime_builder ]]; then
-    printf 'SOL engine runtime packager not found: %s\n' "$runtime_builder" >&2
-    exit 1
-fi
-
 copy_bundle() {
     local destination=$1
     mkdir -p "$(dirname "$destination")"
@@ -54,30 +44,57 @@ install_bundle_copies() {
     fi
 }
 
-# A valid existing sol.pk3 is a self-contained runtime. This permits installed
-# packages to run after their build-time vend directory has been removed.
-if [[ -f $bundle && ${SOL_FORCE_BUNDLE_REFRESH:-0} != 1 ]]; then
-    if "${bundle_tool[@]}" verify \
-        --bundle "$bundle" --manifest "$manifest" --version-file "$version_file" \
-        >/dev/null 2>&1; then
+bundle_valid=0
+if [[ -f $bundle ]] && "${bundle_tool[@]}" verify \
+    --bundle "$bundle" --manifest "$manifest" --version-file "$version_file" \
+    >/dev/null 2>&1; then
+    bundle_valid=1
+fi
+
+wadpack_ready=0
+if "${wadpack_tool[@]}" verify >/dev/null 2>&1; then
+    wadpack_ready=1
+fi
+
+# Explicit reuse is useful for installed/test packages that should never touch
+# build inputs. Otherwise, a complete development wadpack always regenerates
+# sol.pk3 so current SOL runtime/map source cannot be hidden by a stale bundle.
+if ((bundle_valid)) && [[ ${SOL_BUNDLE_REUSE:-0} == 1 ]]; then
+    install_bundle_copies
+    printf '%s\n' "$bundle"
+    exit 0
+fi
+
+if ((wadpack_ready == 0)); then
+    if ((bundle_valid)); then
         install_bundle_copies
         printf '%s\n' "$bundle"
         exit 0
     fi
-fi
-
-if ! "${wadpack_tool[@]}" verify >/dev/null 2>&1; then
     if [[ ${SOL_BUNDLE_NO_SETUP:-0} == 1 ]]; then
         printf 'SOL wadpack is incomplete and no valid sol.pk3 exists.\n' >&2
         exit 1
-    elif [[ -t 0 && -t 1 || ${SOL_COCKPIT_ASSUME_YES:-0} == 1 ]]; then
+    fi
+    if [[ -t 0 && -t 1 || ${SOL_COCKPIT_ASSUME_YES:-0} == 1 ]]; then
         bash "$root/tools/sol-wadpack-setup.sh"
     else
         printf 'SOL wadpack is incomplete and no valid sol.pk3 exists. Run tools/sol-wadpack-setup.sh.\n' >&2
         exit 1
     fi
+    "${wadpack_tool[@]}" verify >/dev/null || {
+        printf 'SOL wadpack remains incomplete after setup.\n' >&2
+        exit 1
+    }
 fi
-"${wadpack_tool[@]}" verify >/dev/null
+
+runtime_builder="$engine_root/tools/sol-package.sh"
+if [[ -f $engine_root/tools/sol-runtime-package.sh ]]; then
+    runtime_builder="$engine_root/tools/sol-runtime-package.sh"
+fi
+if [[ ! -f $runtime_builder ]]; then
+    printf 'SOL engine runtime packager not found: %s\n' "$runtime_builder" >&2
+    exit 1
+fi
 
 runtime_package=${SOL_RUNTIME_COMPONENT:-$(bash "$runtime_builder")}
 content_package=${SOL_CONTENT_COMPONENT:-$(bash "$root/tools/sol-build.sh")}
