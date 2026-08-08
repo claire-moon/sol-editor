@@ -90,6 +90,8 @@ def expected_contract(manifest_path: Path | None, version_path: Path | None) -> 
     version = read_json(version_path)
     return {
         'version': version['version'],
+        'bundle_contract': version.get('bundle_contract'),
+        'bundle_name': version.get('bundle_name'),
         'wadpack_contract': version['wadpack_contract'],
         'wadpack_entries': version['wadpack_entries'],
         'ids': [item['id'] for item in manifest['load_order']],
@@ -110,6 +112,10 @@ def validate_contract(metadata: dict[str, Any], expected: dict[str, Any] | None)
         return
     if metadata.get('version') != expected['version']:
         die('SOL bundle version does not match this checkout')
+    if metadata.get('bundle_contract') != expected['bundle_contract']:
+        die('SOL bundle contract does not match this checkout')
+    if expected['bundle_name'] not in (None, 'sol.pk3'):
+        die('Unsupported SOL bundle filename contract')
     if metadata.get('wadpack_contract') != expected['wadpack_contract']:
         die('SOL bundle wadpack contract does not match this checkout')
     if metadata.get('wadpack_entries') != expected['wadpack_entries']:
@@ -153,6 +159,31 @@ def verify_bundle(bundle: Path, expected: dict[str, Any] | None = None) -> dict[
     raise AssertionError('unreachable')
 
 
+def one_component(metadata: dict[str, Any], kind: str) -> dict[str, Any]:
+    matches = [entry for entry in metadata['components'] if entry.get('kind') == kind]
+    if len(matches) != 1:
+        die(f'SOL bundle must contain exactly one {kind} component')
+    return matches[0]
+
+
+def verify_live_inputs(metadata: dict[str, Any], runtime: Path | None,
+                       content: Path | None, credits: Path | None) -> None:
+    checks = ((runtime, 'runtime'), (content, 'content'))
+    for path, kind in checks:
+        if path is None:
+            continue
+        if not path.is_file():
+            die(f'Current SOL {kind} component is missing: {path}')
+        expected = one_component(metadata, kind)['sha256']
+        if sha256_path(path) != expected:
+            die(f'SOL bundle contains a stale {kind} component')
+    if credits is not None:
+        if not credits.is_file():
+            die(f'Current SOL attribution file is missing: {credits}')
+        if sha256_path(credits) != metadata.get('credits_sha256'):
+            die('SOL bundle contains a stale attribution file')
+
+
 def build_bundle(args: argparse.Namespace) -> None:
     manifest = read_json(args.manifest)
     version = read_json(args.version_file)
@@ -162,6 +193,8 @@ def build_bundle(args: argparse.Namespace) -> None:
         die('SOL version metadata and wadpack entry count disagree')
     if version.get('wadpack_contract') is None:
         die('SOL version metadata has no wadpack contract')
+    if version.get('bundle_contract') != 1 or version.get('bundle_name') != 'sol.pk3':
+        die('SOL version metadata has an unsupported bundle contract')
     if not args.runtime.is_file():
         die(f'SOL runtime component is missing: {args.runtime}')
     if not args.content.is_file():
@@ -194,7 +227,7 @@ def build_bundle(args: argparse.Namespace) -> None:
         'schema': SCHEMA,
         'project': 'SOL',
         'version': version['version'],
-        'bundle_contract': version.get('bundle_contract', 1),
+        'bundle_contract': version['bundle_contract'],
         'wadpack_contract': version['wadpack_contract'],
         'wadpack_entries': version['wadpack_entries'],
         'distribution': 'local-build-only-until-third-party-audit',
@@ -224,7 +257,8 @@ def build_bundle(args: argparse.Namespace) -> None:
         tmp_path.unlink(missing_ok=True)
 
     expected = expected_contract(args.manifest, args.version_file)
-    verify_bundle(args.output, expected)
+    metadata = verify_bundle(args.output, expected)
+    verify_live_inputs(metadata, args.runtime, args.content, args.credits)
     print(args.output)
 
 
@@ -279,6 +313,9 @@ def main() -> None:
     verify.add_argument('--bundle', type=Path, required=True)
     verify.add_argument('--manifest', type=Path)
     verify.add_argument('--version-file', type=Path)
+    verify.add_argument('--runtime', type=Path)
+    verify.add_argument('--content', type=Path)
+    verify.add_argument('--credits', type=Path)
 
     extract = sub.add_parser('materialize')
     extract.add_argument('--bundle', type=Path, required=True)
@@ -292,7 +329,8 @@ def main() -> None:
         build_bundle(args)
     elif args.command == 'verify':
         expected = expected_contract(args.manifest, args.version_file)
-        verify_bundle(args.bundle, expected)
+        metadata = verify_bundle(args.bundle, expected)
+        verify_live_inputs(metadata, args.runtime, args.content, args.credits)
         print(args.bundle)
     elif args.command == 'materialize':
         materialize(args)
