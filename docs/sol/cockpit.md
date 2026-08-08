@@ -46,14 +46,16 @@ build/sol/sol.pk3
 ```
 
 The bundle contains the eighteen normalized resources, SOL runtime, E1M1
-content, component hashes, and third-party attribution. The same file is copied
-into the local engine/editor package directories.
+content, component hashes, and third-party attribution. Each component is stored
+intact under a numbered root-level `.wad` carrier so UZDoom's native embedded-
+resource loader recursively mounts the complete stack from one `-file sol.pk3`.
+The same bundle is copied into local engine/editor package directories.
 
-Once a valid `sol.pk3` exists, normal runtime/editor loading can operate from the
-bundle without the loose `vend/wadpack/runtime` files. In a development checkout,
-SOL regenerates the small project-owned runtime/map components and compares their
-exact hashes against `SOLPACK.json`; the large bundle is rewritten only when
-those components or attribution changed.
+Once a valid `sol.pk3` exists, normal gameplay and editor playtests operate from
+that one file without the loose `vend/wadpack/runtime` files. In a development
+checkout, SOL regenerates the small project-owned runtime/map components and
+compares their exact hashes against `SOLPACK.json`; the large bundle is rewritten
+only when those components or attribution changed.
 
 ## Subsequent runs
 
@@ -63,10 +65,13 @@ sol-play E1M1
 sol-edit
 ```
 
-`sol-play` materializes and mounts all bundle components in locked order.
-`sol-edit` materializes the eighteen authoring resources from the same bundle,
-and in-editor tests route through the same SOL runtime contract.
+`sol-play` passes the single `sol.pk3` to UZDoom; UZDoom mounts the embedded
+01→20 stack natively. `sol-edit` materializes only the eighteen authoring
+resources for UDB's resource browser. In-editor tests return to the native
+one-file `sol.pk3` path, followed by UDB's temporary map.
 
-The symlink-safe wrappers resolve the repository from any current directory.
+Local engine builds also install a `sol-engine` launcher beside UZDoom and copy
+`sol.pk3` beside it, so that package can run without the sibling editor checkout.
+
 See `docs/sol/wadpack.md` and `THIRD_PARTY.md` for packaging and attribution
 details.
