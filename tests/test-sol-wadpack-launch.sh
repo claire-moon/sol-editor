@@ -56,10 +56,14 @@ export SOL_ENGINE='$tmp/bin/engine'
 export DOOM_IWAD='$tmp/doom.wad'
 ENV
 
+# This fixture represents an installed package: sol.pk3 exists and is the only
+# runtime payload the launch wrappers need. Explicit reuse prevents a synthetic
+# source rebuild from being required for this integration test.
 common_env=(
   SOL_ENV_FILE="$tmp/sol.env"
   SOL_BUNDLE="$tmp/sol.pk3"
   SOL_BUNDLE_CACHE="$tmp/cache"
+  SOL_BUNDLE_REUSE=1
   SOL_WADPACK_MANIFEST="$tmp/manifest.json"
   SOL_VERSION_FILE="$tmp/version.json"
 )
