@@ -94,6 +94,7 @@
       "runtime_name": "09-final-custom-doom-v1.0.0-beta.pk3",
       "transform": {"type": "copy"},
       "distribution": "GPL-3.0-only-with-asset-review",
+      "source_page": "https://mmaulwurff.github.io/doom-toolbox/add-ons/FinalCustomDoom.html",
       "required": true
     },
     {
@@ -156,7 +157,9 @@
       "source_sha256": ["b739009ac26576f028bb833985b44b375213563bdc8e8c8bd3f2ee182fdd0e35"],
       "runtime_name": "15-universal-ambience.pk3",
       "transform": {"type": "copy"},
-      "distribution": "review-required",
+      "distribution": "GPL-listed-package-with-third-party-audio-review",
+      "source_page": "https://www.moddb.com/addons/universal-ambience",
+      "credits": ["McTed", "Heydoomer", "Agent Ash", "Boondorl", "Dr_Cosmobyte"],
       "required": true
     },
     {
@@ -166,7 +169,9 @@
       "source_sha256": ["b1dc50a069433e2fa5feb6aa63d45ffb9e4c2a8989389fc026e0b44b01e01d36"],
       "runtime_name": "16-cosmoambience-script-edited.pk3",
       "transform": {"type": "copy"},
-      "distribution": "review-required",
+      "distribution": "GPL-listed-upstream-local-edit-with-third-party-audio-review",
+      "source_page": "https://www.moddb.com/addons/universal-ambience",
+      "credits": ["McTed", "Dr_Cosmobyte"],
       "required": true
     },
     {
@@ -176,7 +181,9 @@
       "source_sha256": ["96b652aea1883c38e22797578280804f8a4557c7aa5c48cacdba45351413eb8b"],
       "runtime_name": "17-ambient-decorations.pk3",
       "transform": {"type": "copy"},
-      "distribution": "review-required",
+      "distribution": "GPL-listed-package-with-third-party-audio-review",
+      "source_page": "https://www.moddb.com/addons/universal-ambience",
+      "credits": ["McTed", "Agent Ash"],
       "required": true
     },
     {
@@ -187,6 +194,8 @@
       "runtime_name": "18-targetspy-v3.1.0.pk3",
       "transform": {"type": "copy"},
       "distribution": "GPL-3.0-only",
+      "source_page": "https://mmaulwurff.github.io/doom-toolbox/add-ons/TargetSpy.html",
+      "credits": ["Alexander Kromm (mmaulwurff)"],
       "required": true
     }
   ]
