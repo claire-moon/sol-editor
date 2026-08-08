@@ -6,6 +6,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import tempfile
 import zipfile
 from pathlib import Path
@@ -15,6 +16,7 @@ SCHEMA = 1
 EPOCH = (1980, 1, 1, 0, 0, 0)
 BINARY_COMPRESSION = zipfile.ZIP_STORED
 TEXT_COMPRESSION = zipfile.ZIP_DEFLATED
+CARRIER_RE = re.compile(r'^(\d{2})-[a-z0-9][a-z0-9._-]*\.wad$')
 
 
 def die(message: str, code: int = 1) -> None:
@@ -68,14 +70,23 @@ def runtime_inputs(manifest: dict[str, Any], vend: Path) -> list[tuple[dict[str,
     return result
 
 
+def carrier_name(order: int, ident: str) -> str:
+    safe = re.sub(r'[^a-z0-9._-]+', '-', ident.casefold()).strip('-')
+    if not safe:
+        die(f'Cannot derive embedded carrier name for component {order}')
+    return f'{order:02d}-{safe}.wad'
+
+
 def component_record(order: int, kind: str, ident: str, display_name: str,
-                     archive_name: str, digest: str, distribution: str) -> dict[str, Any]:
+                     archive_name: str, runtime_name: str, digest: str,
+                     distribution: str) -> dict[str, Any]:
     return {
         'order': order,
         'kind': kind,
         'id': ident,
         'display_name': display_name,
         'archive': archive_name,
+        'runtime_name': runtime_name,
         'sha256': digest,
         'distribution': distribution,
     }
@@ -99,15 +110,36 @@ def expected_contract(manifest_path: Path | None, version_path: Path | None) -> 
     }
 
 
+def validate_component_table(components: list[dict[str, Any]]) -> None:
+    if not components:
+        die('SOL bundle component table is empty')
+    archives = [entry.get('archive') for entry in components]
+    if len(archives) != len(set(archives)):
+        die('SOL bundle contains duplicate embedded carrier names')
+    for expected_order, entry in enumerate(components, start=1):
+        if entry.get('order') != expected_order:
+            die('SOL bundle component order is not contiguous')
+        archive = str(entry.get('archive', ''))
+        match = CARRIER_RE.fullmatch(archive)
+        if match is None or int(match.group(1)) != expected_order:
+            die(f'Invalid native embedded carrier name: {archive}')
+        runtime_name = str(entry.get('runtime_name', ''))
+        if not runtime_name or '/' in runtime_name or '\\' in runtime_name:
+            die(f'Invalid materialized runtime name: {runtime_name}')
+    kinds = [entry.get('kind') for entry in components]
+    if kinds[-2:] != ['runtime', 'content']:
+        die('SOL bundle must end with runtime and content components')
+    if any(kind != 'wadpack' for kind in kinds[:-2]):
+        die('SOL bundle contains an unexpected component kind')
+
+
 def validate_contract(metadata: dict[str, Any], expected: dict[str, Any] | None) -> None:
     if metadata.get('schema') != SCHEMA or metadata.get('project') != 'SOL':
         die('Unsupported SOL bundle metadata')
     components = metadata.get('components')
     if not isinstance(components, list):
         die('SOL bundle component table is missing')
-    archives = [entry.get('archive') for entry in components]
-    if len(archives) != len(set(archives)):
-        die('SOL bundle contains duplicate component archive names')
+    validate_component_table(components)
     if expected is None:
         return
     if metadata.get('version') != expected['version']:
@@ -123,8 +155,8 @@ def validate_contract(metadata: dict[str, Any], expected: dict[str, Any] | None)
     wadpack = [entry for entry in components if entry.get('kind') == 'wadpack']
     if [entry.get('id') for entry in wadpack] != expected['ids']:
         die('SOL bundle wadpack IDs do not match this checkout')
-    if [Path(str(entry.get('archive'))).name for entry in wadpack] != expected['runtime_names']:
-        die('SOL bundle wadpack runtime names do not match this checkout')
+    if [entry.get('runtime_name') for entry in wadpack] != expected['runtime_names']:
+        die('SOL bundle materialized runtime names do not match this checkout')
 
 
 def verify_bundle(bundle: Path, expected: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -206,28 +238,34 @@ def build_bundle(args: argparse.Namespace) -> None:
     components: list[dict[str, Any]] = []
     sources: list[tuple[str, Path]] = []
     for order, (item, path, digest) in enumerate(inputs, start=1):
-        archive_name = f'components/{item["runtime_name"]}'
+        archive_name = carrier_name(order, item['id'])
         components.append(component_record(
             order, 'wadpack', item['id'], item['display_name'], archive_name,
-            digest, item.get('distribution', 'unknown')))
+            item['runtime_name'], digest, item.get('distribution', 'unknown')))
         sources.append((archive_name, path))
 
+    runtime_order = len(components) + 1
     runtime_digest = sha256_path(args.runtime)
+    runtime_archive = carrier_name(runtime_order, 'sol-runtime')
+    components.append(component_record(
+        runtime_order, 'runtime', 'sol-runtime', 'SOL runtime', runtime_archive,
+        args.runtime.name, runtime_digest, 'SOL-project'))
+    sources.append((runtime_archive, args.runtime))
+
+    content_order = len(components) + 1
     content_digest = sha256_path(args.content)
+    content_archive = carrier_name(content_order, 'sol-content')
     components.append(component_record(
-        len(components) + 1, 'runtime', 'sol-runtime', 'SOL runtime',
-        'components/19-sol-runtime.pk3', runtime_digest, 'SOL-project'))
-    sources.append(('components/19-sol-runtime.pk3', args.runtime))
-    components.append(component_record(
-        len(components) + 1, 'content', 'sol-content', 'SOL E1M1 content',
-        'components/20-sol-content.pk3', content_digest, 'SOL-project'))
-    sources.append(('components/20-sol-content.pk3', args.content))
+        content_order, 'content', 'sol-content', 'SOL E1M1 content', content_archive,
+        args.content.name, content_digest, 'SOL-project'))
+    sources.append((content_archive, args.content))
 
     metadata = {
         'schema': SCHEMA,
         'project': 'SOL',
         'version': version['version'],
         'bundle_contract': version['bundle_contract'],
+        'native_embedding': 'uzdoom-root-wad-carriers',
         'wadpack_contract': version['wadpack_contract'],
         'wadpack_entries': version['wadpack_entries'],
         'distribution': 'local-build-only-until-third-party-audit',
@@ -280,7 +318,7 @@ def materialize(args: argparse.Namespace) -> None:
     paths: list[Path] = []
     with zipfile.ZipFile(args.bundle) as archive:
         for entry in selected_components(metadata, args.scope):
-            destination = root / Path(entry['archive']).name
+            destination = root / entry['runtime_name']
             if not destination.is_file() or sha256_path(destination) != entry['sha256']:
                 with tempfile.NamedTemporaryFile(dir=root, delete=False) as tmp:
                     tmp_path = Path(tmp.name)
