@@ -77,14 +77,14 @@ mapfile -t engine_paths < <(python3 "$root/tools/sol-bundle.py" materialize \
     --bundle "$tmp/sol.pk3" --directory "$tmp/cache" --scope engine \
     --manifest "$tmp/manifest.json" --version-file "$tmp/version.json")
 test ${#engine_paths[@]} -eq 3
-[[ ${engine_paths[2]} == */19-sol-runtime.pk3 ]]
+[[ ${engine_paths[2]} == */runtime.pk3 ]]
 cmp "$tmp/runtime.pk3" "${engine_paths[2]}"
 
 mapfile -t all_paths < <(python3 "$root/tools/sol-bundle.py" materialize \
     --bundle "$tmp/sol.pk3" --directory "$tmp/cache" --scope all \
     --manifest "$tmp/manifest.json" --version-file "$tmp/version.json")
 test ${#all_paths[@]} -eq 4
-[[ ${all_paths[3]} == */20-sol-content.pk3 ]]
+[[ ${all_paths[3]} == */content.pk3 ]]
 cmp "$tmp/content.pk3" "${all_paths[3]}"
 
 python3 - "$tmp/sol.pk3" <<'PY'
@@ -92,9 +92,19 @@ import json, sys, zipfile
 with zipfile.ZipFile(sys.argv[1]) as zf:
     data = json.loads(zf.read('SOLPACK.json'))
     assert data['bundle_contract'] == 1
+    assert data['native_embedding'] == 'uzdoom-root-wad-carriers'
     assert data['wadpack_contract'] == 99
     assert data['wadpack_entries'] == 2
     assert [c['kind'] for c in data['components']] == ['wadpack', 'wadpack', 'runtime', 'content']
+    assert [c['archive'] for c in data['components']] == [
+        '01-one.wad', '02-two.wad', '03-sol-runtime.wad', '04-sol-content.wad'
+    ]
+    assert [c['runtime_name'] for c in data['components']] == [
+        '01-one.pk3', '02-two.wad', 'runtime.pk3', 'content.pk3'
+    ]
+    for member in data['components']:
+        assert '/' not in member['archive']
+        assert member['archive'].endswith('.wad')
     assert zf.read('THIRD_PARTY.md') == b'# Fixture credits\n'
 PY
 
@@ -124,4 +134,4 @@ if python3 "$root/tools/sol-bundle.py" verify --bundle "$tmp/bad.pk3" >/dev/null
     exit 1
 fi
 
-printf 'SOL bundle tests passed\n'
+printf 'SOL native embedded bundle tests passed\n'
