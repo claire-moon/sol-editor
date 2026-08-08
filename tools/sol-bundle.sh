@@ -50,7 +50,10 @@ if [[ -f $bundle && ${SOL_FORCE_BUNDLE_REFRESH:-0} != 1 ]]; then
 fi
 
 if ! "${wadpack_tool[@]}" verify >/dev/null 2>&1; then
-    if [[ -t 0 && -t 1 || ${SOL_COCKPIT_ASSUME_YES:-0} == 1 ]]; then
+    if [[ ${SOL_BUNDLE_NO_SETUP:-0} == 1 ]]; then
+        printf 'SOL wadpack is incomplete and no valid sol.pk3 exists.\n' >&2
+        exit 1
+    elif [[ -t 0 && -t 1 || ${SOL_COCKPIT_ASSUME_YES:-0} == 1 ]]; then
         bash "$root/tools/sol-wadpack-setup.sh"
     else
         printf 'SOL wadpack is incomplete and no valid sol.pk3 exists. Run tools/sol-wadpack-setup.sh.\n' >&2
