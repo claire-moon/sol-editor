@@ -1,9 +1,8 @@
 # SOL locked wadpack
 
-SOL v0.1.0 uses a fixed local resource stack to establish the intended visual,
-audio, movement, gore, lighting, ambience, targeting, and HUD baseline. The
-order is part of the game contract and must not be rearranged during normal
-playtests.
+SOL v0.1.0 uses a fixed resource stack to establish the intended visual, audio,
+movement, gore, lighting, ambience, targeting, and HUD baseline. The order is
+part of the game contract and must not be rearranged during normal playtests.
 
 ## Load order
 
@@ -26,15 +25,10 @@ playtests.
 17. Ambient decorations
 18. TargetSpy v3.1.0
 
-Entries 15–18 are the ambience/targeting extension added after the initial
-v0.1.0 release cut. They are appended in this order so the original fourteen
-resource precedence remains unchanged. Wadpack contract 2 requires all eighteen
-entries.
+Entries 15–18 are appended after the original fourteen so the earlier resource
+precedence remains unchanged. Wadpack contract 2 requires all eighteen entries.
 
-The locked third-party resources load first. SOL's runtime package and current
-map package load afterward so project-owned fixes can override the baseline.
-
-## Local installation
+## Build-time import
 
 ```bash
 bash tools/sol-wadpack-setup.sh
@@ -42,17 +36,17 @@ bash tools/sol-wadpack-setup.sh
 
 The setup program searches `vend`, the SOL workspace, Downloads, Desktop, and
 Documents. When files remain missing, it opens an isolated Midnight Commander
-selector. Highlight the folder containing the files, press `F2`, then choose
-`W` to import and normalize every recognized item in that folder.
+selector. Highlight the folder containing the files, press `F2`, choose `W`,
+review the import, and press `F10`.
 
 The importer writes:
 
 - `vend/wadpack/source/`: preserved local source archives.
 - `vend/wadpack/runtime/`: normalized, numbered runtime files.
 - `vend/wadpack/lock.json`: source and runtime hashes.
-- `vend/wadpack/load-order.txt`: absolute ordered runtime paths.
+- `vend/wadpack/load-order.txt`: ordered build-input paths.
 
-Wrapper archives are normalized rather than passed blindly to UZDoom:
+Wrapper archives are normalized before bundling:
 
 - Universal Weapon Sway has its single repository root removed.
 - `nashgore_next.zip` contributes the nested `nashgore.pk3`.
@@ -67,53 +61,81 @@ The four contract-2 additions are direct PK3 copies with exact source hashes:
 - `3 Ambient decorations.pk3`: `96b652aea1883c38e22797578280804f8a4557c7aa5c48cacdba45351413eb8b`
 - `TargetSpy-v3.1.0.pk3`: `6cdafe4af382f76071150a9c4f39b61597f22cf7098a02837cc1b6a81808e128`
 
-## Editor and launch integration
+## Single runtime package
 
-`sol-play` verifies the lock, rebuilds the SOL runtime package, and supplies the
-eighteen ordered files on every launch. It refuses to start when the pack is
-missing or changed.
+After the eighteen resources are present, build the final runtime:
 
-`sol-edit` verifies the same lock and exports both the active load-order file and
-the stable editor test-engine wrapper:
-
-```text
-tools/sol-editor-engine.sh
+```bash
+bash tools/sol-package.sh
 ```
 
-While SOL Editor is running through `sol-edit`, the editor reads
-`SOL_WADPACK_LOAD_ORDER` and adds the eighteen locked WAD/PK3 files to its
-in-memory resource list in manifest order. Their textures, sprites, actors, and
-other definitions are therefore available during authoring without manually
-adding the pack to each map configuration. These injected entries are marked
-not-for-testing, so UDB does not duplicate them in its generated command line.
-They are not written into the user's normal Ultimate Doom Builder resource
-configuration.
+The result is:
 
-The test launcher separately reads `SOL_EDITOR_TEST_ENGINE` and temporarily
-routes map tests through the wrapper. The user's normal Ultimate Doom Builder
-test-engine setting is left unchanged on disk. The wrapper is the single
-runtime injection point for the locked wadpack and SOL runtime before UDB's
-temporary map arguments.
+```text
+build/sol/sol.pk3
+```
 
-`sol-project/.udb/sol-wadpack.resources.txt` is also regenerated from the active
-lock for inspection and tooling.
+Bundle contract 1 stores the normalized resources as intact child archives:
 
-## Distribution and licensing
+```text
+sol.pk3
+├── SOLPACK.json
+├── THIRD_PARTY.md
+└── components/
+    ├── 01-voxel-doom-v2.4.pk3
+    ├── 02-universal-weapon-sway.pk3
+    ├── ...
+    ├── 18-targetspy-v3.1.0.pk3
+    ├── 19-sol-runtime.pk3
+    └── 20-sol-content.pk3
+```
 
-The public repositories contain only the manifest, expected source hashes,
-normalizer, lock format, tests, and documentation. Third-party binaries remain
-under the user's local `vend` directory.
+The third-party archives are deliberately not flattened into one ZIP namespace.
+Many Doom mods define identically named root resources such as `ZSCRIPT`,
+`MAPINFO`, `DECORATE`, `MENUDEF`, sprites, or sounds. Flattening would silently
+replace earlier files and change or break behavior. The SOL bundle instead keeps
+each archive intact and records its SHA-256 in `SOLPACK.json`.
 
-The three ambience additions do not include license/readme metadata in the
-supplied PK3 files and are therefore marked `review-required`. TargetSpy v3.1.0
-identifies its main project license as GPL-3.0-only and also carries its bundled
-license notices. This does not change the local-only policy for the SOL wadpack.
+`tools/sol-bundle.py` verifies every embedded member before launch and
+materializes the child archives into a cache keyed by the complete `sol.pk3`
+hash. Normal play mounts entries 1–20 in order. Editor authoring materializes
+entries 1–18, and editor test runs mount entries 1–19 before UDB's temporary map.
 
-Several existing entries contain proprietary Doom/PlayStation-derived data or
-have licenses that require further review. They must not be embedded in a
-public SOL binary or release archive until every component has a recorded
-redistribution basis. Literal executable embedding is deferred until that audit
-and the final resource tuning pass are complete.
+Once `sol.pk3` exists and matches the current bundle/wadpack contracts, it is a
+self-contained runtime. The loose `vend/wadpack/runtime` files are no longer
+needed for normal play or editor loading; they remain useful as build inputs when
+regenerating the bundle.
 
-The current manifest records known source hashes. HQ PSX music is intentionally
-unlocked until the exact selected archive is supplied and recorded.
+## Package placement
+
+A successful bundle build copies the same `sol.pk3` into:
+
+- `sol-editor/build/sol/sol.pk3`
+- `sol-editor/Build/sol.pk3` when the editor has been built
+- `sol-engine/build/sol/sol.pk3`
+- `sol-engine/build/sol-local/sol.pk3` for the default local engine build
+- the directories containing the configured `SOL_ENGINE` and `SOL_EDITOR`
+  executables when those paths are available
+
+The engine-side `tools/sol-package.sh` attempts to produce this final bundle when
+the sibling editor and complete wadpack are available. During first-run setup it
+can still emit the SOL-owned runtime component so workspace initialization is not
+blocked before the third-party import step.
+
+## Attribution and licensing
+
+`THIRD_PARTY.md` is committed in both SOL repositories and embedded in
+`sol.pk3`. Upstream WAD/PK3 archives are preserved intact, including license or
+readme files contained by those archives.
+
+This records attribution and provenance but does not grant redistribution rights.
+The three ambience additions remain `review-required`; TargetSpy v3.1.0 is
+recorded as GPL-3.0-only; several other components still require license review;
+and the HQ PlayStation music/sound effects are recorded as local-only
+proprietary audio.
+
+Therefore the complete `sol.pk3` may be generated and copied into local SOL
+engine/editor packages for development and testing, but it must not be committed
+to the public repository or attached to a public release until the third-party
+redistribution audit is complete. The SOL project license does not relicense the
+embedded third-party content.
