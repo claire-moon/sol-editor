@@ -1,14 +1,15 @@
 {
   "project": "SOL Editor",
-  "version": "0.1.0",
-  "release": "graybox",
-  "engine_contract": "0.1.0",
+  "version": "0.2.0",
+  "release": "story-authoring-foundation",
+  "engine_contract": "0.2.0",
   "map": "E1M1",
   "map_format": "UDMF",
   "wadpack_contract": 2,
   "wadpack_entries": 18,
   "bundle_contract": 1,
   "bundle_name": "sol.pk3",
+  "story_contract": 1,
   "doomtools": {
     "repository": "https://github.com/MTrop/DoomTools.git",
     "commit": "b2590d80918c02c9605c5338e31eaa98a2089e5f"

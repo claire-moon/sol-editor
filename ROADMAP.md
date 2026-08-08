@@ -30,6 +30,14 @@ Add stable event IDs, objectives, subtitles, radio events, save/load validation,
 and reusable story prefabs within individual maps. Begin tuning wadpack settings
 into SOL-owned defaults.
 
+Foundation status:
+
+- story contract 1 defines typed `events`, `objectives`, `subtitles`, and `radio` namespaces;
+- stable IDs use 1–65535 and are validated for duplicates and dangling references;
+- the canonical E1M1 manifest is packaged as `SOLSTORY.json`;
+- map-specific narrative entries remain unassigned until authored;
+- wadpack contract 2 and bundle contract 1 remain unchanged.
+
 ## Phase 3 — Classic Episode Authoring (`v0.3.0`)
 
 Add map title patches, par times, secret exits, world-map markers,

@@ -7,15 +7,18 @@ build_dir="$root/build/sol"
 generated_dir="$build_dir/generated/e1m1"
 stage_dir="$build_dir/stage"
 archive="$build_dir/sol-e1m1-v${version}.pk3"
+story_manifest="$root/sol-project/story/story.json"
 
 rm -rf "$generated_dir" "$stage_dir"
 mkdir -p "$generated_dir" "$stage_dir/maps"
+python3 "$root/tools/sol-story.py" "$story_manifest" >/dev/null
 python3 "$root/tools/sol-generate-e1m1.py" --output "$generated_dir" >/dev/null
 python3 "$root/tools/sol-validate-e1m1.py" --directory "$generated_dir" >/dev/null
 cmp "$generated_dir/stats.json" "$root/sol-project/maps/e1m1/stats.json"
 cmp "$generated_dir/layout.svg" "$root/sol-project/maps/e1m1/layout.svg"
 
 cp -a "$root/sol-project/src/." "$stage_dir/"
+cp "$story_manifest" "$stage_dir/SOLSTORY.json"
 cp "$generated_dir/E1M1.wad" "$stage_dir/maps/E1M1.wad"
 rm -f "$archive"
 (

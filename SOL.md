@@ -6,11 +6,16 @@ test launches against the locally built `sol-engine` fork.
 
 ## Current release
 
-`v0.1.0` establishes the deterministic E1M1 graybox, classic Doom progression,
-shared SOL branding, guided local setup, and the eighteen-resource locked
-visual/audio contract used by both authoring and test launches.
+`v0.2.0` begins Phase 2 story authoring while preserving the deterministic E1M1
+graybox, classic Doom progression, shared branding, wadpack contract 2, and
+bundle contract 1 established by v0.1.0.
 
-The physical SOL runtime payload is one file:
+Story contract 1 adds a canonical authoring manifest, stable typed IDs, strict
+cross-reference validation, and packaging of the exact manifest into the map
+content component. The foundation intentionally contains no invented E1M1
+narrative text or triggers.
+
+The physical SOL runtime payload remains one file:
 
 ```text
 sol.pk3
@@ -53,6 +58,36 @@ sol          # setup/status cockpit
 sol-play     # UZDoom loads one sol.pk3 and mounts its embedded stack natively
 sol-edit     # editor authoring + tests use the same bundle contract
 ```
+
+## Story authoring contract
+
+The canonical E1M1 story manifest is:
+
+```text
+sol-project/story/story.json
+```
+
+Story contract 1 has four independent namespaces: `events`, `objectives`,
+`subtitles`, and `radio`. IDs are integers from 1 through 65535. Each namespace
+also uses stable lowercase keys. Once an ID is assigned to shipped content it is
+append-only and must not be silently reused for a different meaning.
+
+`tools/sol-story.py` validates the manifest and rejects invalid IDs or keys,
+duplicates, and event references to missing objective/subtitle/radio IDs. The
+initial manifest is deliberately empty until the E1M1 narrative beats are
+authored.
+
+`tools/sol-build.sh` validates the manifest before every content build and embeds
+the exact file as `SOLSTORY.json` beside `SOLINFO` and `maps/E1M1.wad`. The
+v0.2.0 content component is:
+
+```text
+build/sol/sol-e1m1-v0.2.0.pk3
+```
+
+The matching engine runtime stores save-persistent story state under the same
+story contract. Trigger actors, HUD objective presentation, subtitle timing,
+radio playback, and concrete map narrative remain subsequent Phase 2 work.
 
 ## Locked resource stack
 
@@ -108,6 +143,8 @@ third-party audit is complete.
 - `tools/sol-package.sh`: user-facing editor package command for `sol.pk3`.
 - `tools/sol-editor-engine.sh`: native-bundle editor test-engine wrapper.
 - `tools/sol-generate-e1m1.py`: E1M1 UDMF source generator.
+- `tools/sol-story.py`: story contract validator.
+- `sol-project/story/story.json`: canonical E1M1 story authoring manifest.
 - `sol-project/wadpack.json`: authoritative load order, hashes, and provenance.
 - `THIRD_PARTY.md`: attribution, license-status, and provenance inventory.
 - `docs/sol/`: setup, release, wadpack, and authoring contracts.
