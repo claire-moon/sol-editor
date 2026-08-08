@@ -21,11 +21,11 @@ bundle_tool=(python3 "$root/tools/sol-bundle.py")
 wadpack_tool=(python3 "$root/tools/sol-wadpack.py" --manifest "$manifest" --vend "$vend_root")
 
 runtime_builder="$engine_root/tools/sol-package.sh"
-if [[ -x $engine_root/tools/sol-runtime-package.sh ]]; then
+if [[ -f $engine_root/tools/sol-runtime-package.sh ]]; then
     runtime_builder="$engine_root/tools/sol-runtime-package.sh"
 fi
 
-if [[ ! -x $runtime_builder ]]; then
+if [[ ! -f $runtime_builder ]]; then
     printf 'SOL engine runtime packager not found: %s\n' "$runtime_builder" >&2
     exit 1
 fi
