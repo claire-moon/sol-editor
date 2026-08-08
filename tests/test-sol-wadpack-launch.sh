@@ -56,13 +56,9 @@ export SOL_ENGINE='$tmp/bin/engine'
 export DOOM_IWAD='$tmp/doom.wad'
 ENV
 
-# This fixture represents an installed package: sol.pk3 exists and is the only
-# runtime payload the launch wrappers need. Explicit reuse prevents a synthetic
-# source rebuild from being required for this integration test.
 common_env=(
   SOL_ENV_FILE="$tmp/sol.env"
   SOL_BUNDLE="$tmp/sol.pk3"
-  SOL_BUNDLE_CACHE="$tmp/cache"
   SOL_BUNDLE_REUSE=1
   SOL_WADPACK_MANIFEST="$tmp/manifest.json"
   SOL_VERSION_FILE="$tmp/version.json"
@@ -72,23 +68,32 @@ output=$(env "${common_env[@]}" bash "$root/tools/sol-test-main.sh" E1M1)
 printf '%s\n' "$output" > "$tmp/play-args"
 grep -Fx -- '-iwad' "$tmp/play-args"
 grep -Fx "$tmp/doom.wad" "$tmp/play-args"
-one_line=$(grep -nE '/01-one\.pk3$' "$tmp/play-args" | cut -d: -f1)
-two_line=$(grep -nE '/02-two\.pk3$' "$tmp/play-args" | cut -d: -f1)
-runtime_line=$(grep -nE '/19-sol-runtime\.pk3$' "$tmp/play-args" | cut -d: -f1)
-content_line=$(grep -nE '/20-sol-content\.pk3$' "$tmp/play-args" | cut -d: -f1)
-test "$one_line" -lt "$two_line"
-test "$two_line" -lt "$runtime_line"
-test "$runtime_line" -lt "$content_line"
+grep -Fx -- '-file' "$tmp/play-args"
+grep -Fx "$tmp/sol.pk3" "$tmp/play-args"
 grep -Fx '+map' "$tmp/play-args"
 grep -Fx 'E1M1' "$tmp/play-args"
+! grep -E '/01-one\.pk3$|/02-two\.pk3$|/runtime\.pk3$|/content\.pk3$' "$tmp/play-args"
+
+test $(grep -Fc "$tmp/sol.pk3" "$tmp/play-args") -eq 1
 
 wrapper_output=$(env "${common_env[@]}" \
   bash "$root/tools/sol-editor-engine.sh" -file "$tmp/editor-map.wad" +map E1M1)
 printf '%s\n' "$wrapper_output" > "$tmp/editor-args"
-grep -E '/01-one\.pk3$' "$tmp/editor-args"
-grep -E '/02-two\.pk3$' "$tmp/editor-args"
-grep -E '/19-sol-runtime\.pk3$' "$tmp/editor-args"
-! grep -E '/20-sol-content\.pk3$' "$tmp/editor-args"
-grep -Fx "$tmp/editor-map.wad" "$tmp/editor-args"
+bundle_line=$(grep -nFx "$tmp/sol.pk3" "$tmp/editor-args" | cut -d: -f1)
+map_line=$(grep -nFx "$tmp/editor-map.wad" "$tmp/editor-args" | cut -d: -f1)
+test -n "$bundle_line"
+test -n "$map_line"
+test "$bundle_line" -lt "$map_line"
+! grep -E '/01-one\.pk3$|/02-two\.pk3$|/runtime\.pk3$|/content\.pk3$' "$tmp/editor-args"
 
-printf 'single-PK3 launch integration tests passed\n'
+python3 - "$tmp/sol.pk3" <<'PY'
+import json, sys, zipfile
+with zipfile.ZipFile(sys.argv[1]) as zf:
+    data = json.loads(zf.read('SOLPACK.json'))
+    assert data['native_embedding'] == 'uzdoom-root-wad-carriers'
+    assert [c['archive'] for c in data['components']] == [
+        '01-one.wad', '02-two.wad', '03-sol-runtime.wad', '04-sol-content.wad'
+    ]
+PY
+
+printf 'native single-PK3 launch integration tests passed\n'
