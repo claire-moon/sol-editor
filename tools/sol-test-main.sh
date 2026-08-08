@@ -33,27 +33,22 @@ fi
 manifest=${SOL_WADPACK_MANIFEST:-"$root/sol-project/wadpack.json"}
 version_file=${SOL_VERSION_FILE:-"$root/sol/version.json"}
 bundle=${SOL_BUNDLE:-"$root/build/sol/sol.pk3"}
-cache=${SOL_BUNDLE_CACHE:-"$root/build/sol/materialized"}
 bundle_tool=(python3 "$root/tools/sol-bundle.py")
 
-# The bundler cheaply regenerates the two SOL-owned component packages and only
-# rewrites the large sol.pk3 when their hashes, attribution, or bundle contract
-# changed. Installed packages with no vend tree reuse the verified bundle.
+# Development checkouts refresh SOL-owned component hashes before play. An
+# installed package with no loose vend tree reuses its verified sol.pk3.
 bundle=$(SOL_BUNDLE="$bundle" bash "$root/tools/sol-bundle.sh")
 "${bundle_tool[@]}" verify \
     --bundle "$bundle" --manifest "$manifest" --version-file "$version_file" \
     >/dev/null
-mapfile -t bundle_files < <("${bundle_tool[@]}" materialize \
-    --bundle "$bundle" --directory "$cache" --scope all \
-    --manifest "$manifest" --version-file "$version_file")
 
 map_name=${1:-E1M1}
 if [[ $# -gt 0 ]]; then shift; fi
 
-# sol.pk3 is the physical runtime payload. Its intact embedded archives are
-# materialized and mounted in locked order so duplicate root resources in
-# third-party mods cannot overwrite one another during bundle construction.
+# UZDoom natively recognizes the numbered root-level *.wad carrier members in
+# sol.pk3 as embedded resource files. Their bytes remain the original WAD/PK3
+# archives, so the engine recursively mounts 01 through 20 in lexical order.
 exec "$SOL_ENGINE" \
     -iwad "$DOOM_IWAD" \
-    -file "${bundle_files[@]}" \
+    -file "$bundle" \
     +map "$map_name" "$@"
