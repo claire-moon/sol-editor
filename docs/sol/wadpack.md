@@ -1,8 +1,9 @@
 # SOL locked wadpack
 
 SOL v0.1.0 uses a fixed resource stack to establish the intended visual, audio,
-movement, gore, lighting, ambience, targeting, and HUD baseline. The order is
-part of the game contract and must not be rearranged during normal playtests.
+movement, gore, lighting, ambience, targeting, crosshair, and HUD baseline. The
+order is part of the game contract and must not be rearranged during normal
+playtests.
 
 ## Load order
 
@@ -24,9 +25,12 @@ part of the game contract and must not be rearranged during normal playtests.
 16. CosmoAmbience Script edited
 17. Ambient decorations
 18. TargetSpy v3.1.0
+19. Precise Crosshair v1.5.0
 
-Entries 15–18 are appended after the original fourteen so the earlier resource
-precedence remains unchanged. Wadpack contract 2 requires all eighteen entries.
+Wadpack contract 2 added entries 15–18 after the original fourteen so the earlier
+resource precedence stayed unchanged. Wadpack contract 3 preserves entries 1–18
+and appends Precise Crosshair v1.5.0 at entry 19. All nineteen entries are
+required.
 
 ## Build-time import
 
@@ -54,16 +58,28 @@ Wrapper archives are normalized before bundling:
 - Flashlight++ contributes its nested PK3 through 7-Zip.
 - HQ PSX music contributes its nested WAD.
 
-The four contract-2 additions are direct PK3 copies with exact source hashes:
+The contract-2 additions are direct PK3 copies with exact source hashes:
 
 - `1 Universal Ambience.pk3`: `b739009ac26576f028bb833985b44b375213563bdc8e8c8bd3f2ee182fdd0e35`
 - `2 CosmoAmbience Script edited.pk3`: `b1dc50a069433e2fa5feb6aa63d45ffb9e4c2a8989389fc026e0b44b01e01d36`
 - `3 Ambient decorations.pk3`: `96b652aea1883c38e22797578280804f8a4557c7aa5c48cacdba45351413eb8b`
 - `TargetSpy-v3.1.0.pk3`: `6cdafe4af382f76071150a9c4f39b61597f22cf7098a02837cc1b6a81808e128`
 
+Contract 3 accepts the user-supplied Precise Crosshair v1.5.0 package under any
+of these source names:
+
+- `PreciseCrosshair-v1.5.0.pk3`
+- `PreciseCrosshair-1.5.0.pk3`
+- `PreciseCrosshair.pk3`
+
+The public DoomToolbox source directly identifies v1.5.0 and GPL-3.0-only. SOL
+does not invent a binary package hash: the manifest leaves its source hash
+unpinned until import, then `lock.json` records the exact supplied source and
+normalized runtime SHA-256 values.
+
 ## Single runtime package
 
-After all eighteen resources are present, build the final runtime:
+After all nineteen resources are present, build the final runtime:
 
 ```bash
 bash tools/sol-package.sh
@@ -87,8 +103,9 @@ sol.pk3
 ├── 03-troo-cullers.wad
 ├── ...
 ├── 18-targetspy.wad
-├── 19-sol-runtime.wad
-└── 20-sol-content.wad
+├── 19-precise-crosshair.wad
+├── 20-sol-runtime.wad
+└── 21-sol-content.wad
 ```
 
 The `.wad` suffix is a carrier convention, not a file-format conversion. For
@@ -99,7 +116,7 @@ This convention deliberately uses UZDoom's existing native embedded-resource
 behavior. Its filesystem marks root-level archive members ending in `.wad` as
 embedded, opens each one by content, and recursively adds it as a resource file.
 Because the carrier names begin with fixed-width numbers, UZDoom's normal ZIP
-sorting produces the same 01→20 precedence as loading the original resources
+sorting produces the same 01→21 precedence as loading the original resources
 separately.
 
 Therefore normal gameplay and editor playtests pass exactly one resource file:
@@ -120,7 +137,7 @@ checks the complete member set and every child hash before launch.
 ## Editor authoring
 
 Ultimate Doom Builder needs direct resource paths for its authoring data set, so
-`sol-edit` materializes only wadpack entries 1–18 from `sol.pk3` into a cache
+`sol-edit` materializes only wadpack entries 1–19 from `sol.pk3` into a cache
 keyed by the complete bundle hash. Those files are exposed to UDB in-memory and
 are not written over the user's normal resource configuration.
 
@@ -157,6 +174,10 @@ is not blocked before third-party import.
 `THIRD_PARTY.md` is committed in both SOL repositories and embedded in
 `sol.pk3`. Upstream archive bytes are preserved intact, including license/readme
 files contained by those archives.
+
+Precise Crosshair v1.5.0 is part of DoomToolbox and declares GPL-3.0-only and ©
+2019 Alexander Kromm. Its source file explicitly records v1.5.0 and the v1.5.0
+changelog. The supplied PK3 stays local and is hash-locked when imported.
 
 The Universal Ambience distribution page identifies Universal Ambience, Cosmo
 ambience, and Ambient decorations as one numbered package and labels the package

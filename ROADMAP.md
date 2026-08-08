@@ -3,18 +3,19 @@
 ## Completed
 
 - `v0.0.1`: repository foundation, pinned DoomTools, shared launch contract, package validation.
-- `v0.1.0`: deterministic E1M1 graybox, classic Doom progression, Midnight Commander setup cockpit, shared SOL branding, eighteen-resource wadpack contract 2, editor authoring/test injection, and bundle contract 1 with canonical `sol.pk3` local runtime packaging.
+- `v0.1.0`: deterministic E1M1 graybox, classic Doom progression, Midnight Commander setup cockpit, shared SOL branding, nineteen-resource wadpack contract 3, editor authoring/test injection, and bundle contract 1 with canonical `sol.pk3` local runtime packaging.
 
 The original fourteen-resource baseline remains positions 1–14. Wadpack contract
-2 appends Universal Ambience, CosmoAmbience Script edited, Ambient decorations,
-and TargetSpy v3.1.0 in positions 15–18.
+2 added Universal Ambience, CosmoAmbience Script edited, Ambient decorations,
+and TargetSpy v3.1.0 in positions 15–18. Wadpack contract 3 preserves those
+positions and appends Precise Crosshair v1.5.0 at position 19.
 
-A complete local build now stores all eighteen normalized resources, the SOL
+A complete local build now stores all nineteen normalized resources, the SOL
 runtime component, current E1M1 content, component hashes, and attribution in one
 physical `sol.pk3`. Numbered root-level `.wad` carrier names activate UZDoom's
 existing embedded-resource loader, so gameplay/test launches pass one `sol.pk3`
-and UZDoom recursively mounts the complete 01→20 stack natively. Only the UDB
-authoring view materializes entries 1–18 to direct resource paths.
+and UZDoom recursively mounts the complete 01→21 stack natively. Only the UDB
+authoring view materializes entries 1–19 to direct resource paths.
 
 Local engine builds place `sol.pk3` beside UZDoom and install a `sol-engine`
 launcher that loads that bundle by default.
