@@ -39,29 +39,28 @@ python3 "$root/tools/sol-wadpack.py" \
     --manifest "$tmp/manifest.json" --vend "$tmp/vend" \
     import --scan "$tmp/source" >/dev/null
 
-python3 "$root/tools/sol-bundle.py" build \
-    --manifest "$tmp/manifest.json" \
-    --version-file "$tmp/version.json" \
-    --vend "$tmp/vend" \
-    --runtime "$tmp/runtime.pk3" \
-    --content "$tmp/content.pk3" \
-    --credits "$tmp/THIRD_PARTY.md" \
-    --output "$tmp/sol.pk3" >/dev/null
+build_bundle() {
+    python3 "$root/tools/sol-bundle.py" build \
+        --manifest "$tmp/manifest.json" \
+        --version-file "$tmp/version.json" \
+        --vend "$tmp/vend" \
+        --runtime "$tmp/runtime.pk3" \
+        --content "$tmp/content.pk3" \
+        --credits "$tmp/THIRD_PARTY.md" \
+        --output "$tmp/sol.pk3" >/dev/null
+}
 
+build_bundle
 python3 "$root/tools/sol-bundle.py" verify \
     --bundle "$tmp/sol.pk3" \
     --manifest "$tmp/manifest.json" \
-    --version-file "$tmp/version.json" >/dev/null
-
-first_hash=$(sha256sum "$tmp/sol.pk3" | cut -d' ' -f1)
-python3 "$root/tools/sol-bundle.py" build \
-    --manifest "$tmp/manifest.json" \
     --version-file "$tmp/version.json" \
-    --vend "$tmp/vend" \
     --runtime "$tmp/runtime.pk3" \
     --content "$tmp/content.pk3" \
-    --credits "$tmp/THIRD_PARTY.md" \
-    --output "$tmp/sol.pk3" >/dev/null
+    --credits "$tmp/THIRD_PARTY.md" >/dev/null
+
+first_hash=$(sha256sum "$tmp/sol.pk3" | cut -d' ' -f1)
+build_bundle
 second_hash=$(sha256sum "$tmp/sol.pk3" | cut -d' ' -f1)
 test "$first_hash" = "$second_hash"
 
@@ -98,6 +97,26 @@ with zipfile.ZipFile(sys.argv[1]) as zf:
     assert [c['kind'] for c in data['components']] == ['wadpack', 'wadpack', 'runtime', 'content']
     assert zf.read('THIRD_PARTY.md') == b'# Fixture credits\n'
 PY
+
+printf 'changed-runtime\n' >> "$tmp/runtime.pk3"
+if python3 "$root/tools/sol-bundle.py" verify \
+    --bundle "$tmp/sol.pk3" \
+    --manifest "$tmp/manifest.json" \
+    --version-file "$tmp/version.json" \
+    --runtime "$tmp/runtime.pk3" >/dev/null 2>&1; then
+    printf 'stale runtime component passed SOL bundle freshness validation\n' >&2
+    exit 1
+fi
+printf 'runtime-component\n' > "$tmp/runtime.pk3"
+printf 'changed credits\n' >> "$tmp/THIRD_PARTY.md"
+if python3 "$root/tools/sol-bundle.py" verify \
+    --bundle "$tmp/sol.pk3" \
+    --manifest "$tmp/manifest.json" \
+    --version-file "$tmp/version.json" \
+    --credits "$tmp/THIRD_PARTY.md" >/dev/null 2>&1; then
+    printf 'stale attribution passed SOL bundle freshness validation\n' >&2
+    exit 1
+fi
 
 printf 'not a zip\n' > "$tmp/bad.pk3"
 if python3 "$root/tools/sol-bundle.py" verify --bundle "$tmp/bad.pk3" >/dev/null 2>&1; then
