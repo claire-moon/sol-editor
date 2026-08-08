@@ -63,7 +63,7 @@ The four contract-2 additions are direct PK3 copies with exact source hashes:
 
 ## Single runtime package
 
-After the eighteen resources are present, build the final runtime:
+After all eighteen resources are present, build the final runtime:
 
 ```bash
 bash tools/sol-package.sh
@@ -75,36 +75,62 @@ The result is:
 build/sol/sol.pk3
 ```
 
-Bundle contract 1 stores the normalized resources as intact child archives:
+Bundle contract 1 stores every component byte-for-byte under a numbered
+root-level `.wad` carrier:
 
 ```text
 sol.pk3
 ├── SOLPACK.json
 ├── THIRD_PARTY.md
-└── components/
-    ├── 01-voxel-doom-v2.4.pk3
-    ├── 02-universal-weapon-sway.pk3
-    ├── ...
-    ├── 18-targetspy-v3.1.0.pk3
-    ├── 19-sol-runtime.pk3
-    └── 20-sol-content.pk3
+├── 01-voxel-doom.wad
+├── 02-universal-weapon-sway.wad
+├── 03-troo-cullers.wad
+├── ...
+├── 18-targetspy.wad
+├── 19-sol-runtime.wad
+└── 20-sol-content.wad
 ```
 
-The third-party archives are deliberately not flattened into one ZIP namespace.
-Many Doom mods define identically named root resources such as `ZSCRIPT`,
-`MAPINFO`, `DECORATE`, `MENUDEF`, sprites, or sounds. Flattening would silently
-replace earlier files and change or break behavior. The SOL bundle instead keeps
-each archive intact and records its SHA-256 in `SOLPACK.json`.
+The `.wad` suffix is a carrier convention, not a file-format conversion. For
+example, the bytes stored under `01-voxel-doom.wad` remain the normalized Voxel
+Doom PK3 bytes.
 
-`tools/sol-bundle.py` verifies every embedded member before launch and
-materializes the child archives into a cache keyed by the complete `sol.pk3`
-hash. Normal play mounts entries 1–20 in order. Editor authoring materializes
-entries 1–18, and editor test runs mount entries 1–19 before UDB's temporary map.
+This convention deliberately uses UZDoom's existing native embedded-resource
+behavior. Its filesystem marks root-level archive members ending in `.wad` as
+embedded, opens each one by content, and recursively adds it as a resource file.
+Because the carrier names begin with fixed-width numbers, UZDoom's normal ZIP
+sorting produces the same 01→20 precedence as loading the original resources
+separately.
 
-Once `sol.pk3` exists and matches the current bundle/wadpack contracts, it is a
-self-contained runtime. The loose `vend/wadpack/runtime` files are no longer
-needed for normal play or editor loading; they remain useful as build inputs when
-regenerating the bundle.
+Therefore normal gameplay and editor playtests pass exactly one resource file:
+
+```text
+-file sol.pk3
+```
+
+No gameplay extraction layer is required. This also avoids destructive
+flattening: identically named `ZSCRIPT`, `MAPINFO`, `DECORATE`, `MENUDEF`, sprite,
+or sound paths remain isolated in their original child archives until UZDoom
+mounts them in order.
+
+`SOLPACK.json` records each carrier name, original materialized filename,
+component kind, source identity, distribution status, and SHA-256. The verifier
+checks the complete member set and every child hash before launch.
+
+## Editor authoring
+
+Ultimate Doom Builder needs direct resource paths for its authoring data set, so
+`sol-edit` materializes only wadpack entries 1–18 from `sol.pk3` into a cache
+keyed by the complete bundle hash. Those files are exposed to UDB in-memory and
+are not written over the user's normal resource configuration.
+
+In-editor playtests do not use the materialized copies. The test wrapper passes
+`sol.pk3` once and lets UDB's temporary map/resource arguments follow it, so the
+temporary map retains final precedence.
+
+Once `sol.pk3` exists and verifies against the current contracts, the loose
+`vend/wadpack/runtime` files are no longer a normal gameplay/editor-test runtime
+dependency. They remain build inputs for regenerating the bundle.
 
 ## Package placement
 
@@ -114,28 +140,38 @@ A successful bundle build copies the same `sol.pk3` into:
 - `sol-editor/Build/sol.pk3` when the editor has been built
 - `sol-engine/build/sol/sol.pk3`
 - `sol-engine/build/sol-local/sol.pk3` for the default local engine build
-- the directories containing the configured `SOL_ENGINE` and `SOL_EDITOR`
-  executables when those paths are available
+- the directories containing configured `SOL_ENGINE` and `SOL_EDITOR`
+  executables when available
 
-The engine-side `tools/sol-package.sh` attempts to produce this final bundle when
+The local engine build helper also installs `sol-engine` beside the UZDoom
+binary. That launcher requires/loads the adjacent `sol.pk3` automatically and
+uses `DOOM_IWAD` when supplied; otherwise UZDoom keeps its normal IWAD picker.
+
+The engine-side `tools/sol-package.sh` converges on the same final bundle when
 the sibling editor and complete wadpack are available. During first-run setup it
-can still emit the SOL-owned runtime component so workspace initialization is not
-blocked before the third-party import step.
+can still emit the small SOL-owned runtime component so workspace initialization
+is not blocked before third-party import.
 
 ## Attribution and licensing
 
 `THIRD_PARTY.md` is committed in both SOL repositories and embedded in
-`sol.pk3`. Upstream WAD/PK3 archives are preserved intact, including license or
-readme files contained by those archives.
+`sol.pk3`. Upstream archive bytes are preserved intact, including license/readme
+files contained by those archives.
 
-This records attribution and provenance but does not grant redistribution rights.
-The three ambience additions remain `review-required`; TargetSpy v3.1.0 is
-recorded as GPL-3.0-only; several other components still require license review;
-and the HQ PlayStation music/sound effects are recorded as local-only
-proprietary audio.
+The Universal Ambience distribution page identifies Universal Ambience, Cosmo
+ambience, and Ambient decorations as one numbered package and labels the package
+GPL. Its published credits include McTed, Heydoomer, Agent Ash, Boondorl,
+Dr_Cosmobyte, and several external sound sources. Because externally sourced
+audio may have separate terms, entries 15–17 retain an asset-level review
+requirement. Entry 16 is also a supplied edited variant, so its exact hash and
+modification provenance must remain recorded.
 
-Therefore the complete `sol.pk3` may be generated and copied into local SOL
-engine/editor packages for development and testing, but it must not be committed
-to the public repository or attached to a public release until the third-party
-redistribution audit is complete. The SOL project license does not relicense the
-embedded third-party content.
+TargetSpy v3.1.0 declares GPL-3.0-only and © 2026 Alexander Kromm. The full
+source/credit inventory is in `THIRD_PARTY.md` and `sol-project/wadpack.json`.
+
+Attribution does not itself grant redistribution rights. Several components still
+require asset/license review, and HQ PlayStation music/sound effects remain
+local-only proprietary audio. The complete `sol.pk3` may be generated and copied
+into local SOL engine/editor packages for development and testing, but it must
+not be committed to this public repository or attached to a public release until
+the third-party redistribution audit is complete.
