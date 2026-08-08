@@ -36,11 +36,10 @@ bundle=${SOL_BUNDLE:-"$root/build/sol/sol.pk3"}
 cache=${SOL_BUNDLE_CACHE:-"$root/build/sol/materialized"}
 bundle_tool=(python3 "$root/tools/sol-bundle.py")
 
-if ! "${bundle_tool[@]}" verify \
-    --bundle "$bundle" --manifest "$manifest" --version-file "$version_file" \
-    >/dev/null 2>&1; then
-    bundle=$(SOL_BUNDLE="$bundle" bash "$root/tools/sol-bundle.sh")
-fi
+# The bundler cheaply regenerates the two SOL-owned component packages and only
+# rewrites the large sol.pk3 when their hashes, attribution, or bundle contract
+# changed. Installed packages with no vend tree reuse the verified bundle.
+bundle=$(SOL_BUNDLE="$bundle" bash "$root/tools/sol-bundle.sh")
 "${bundle_tool[@]}" verify \
     --bundle "$bundle" --manifest "$manifest" --version-file "$version_file" \
     >/dev/null
