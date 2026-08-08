@@ -14,6 +14,7 @@ on:
       - 'Source/Core/Resources/UDB2.ico'
       - 'SOL.md'
       - 'ROADMAP.md'
+      - 'THIRD_PARTY.md'
       - '.gitignore'
       - '.github/workflows/sol-foundation.yml'
   pull_request:
@@ -28,6 +29,7 @@ on:
       - 'Source/Core/Resources/UDB2.ico'
       - 'SOL.md'
       - 'ROADMAP.md'
+      - 'THIRD_PARTY.md'
       - '.gitignore'
       - '.github/workflows/sol-foundation.yml'
 
@@ -50,7 +52,8 @@ jobs:
           python3 -m py_compile \
             tools/sol-generate-e1m1.py \
             tools/sol-validate-e1m1.py \
-            tools/sol-wadpack.py
+            tools/sol-wadpack.py \
+            tools/sol-bundle.py
       - name: Validate release contract
         run: |
           python3 - <<'PY'
@@ -65,9 +68,13 @@ jobs:
           assert version['engine_contract'] == '0.1.0'
           assert version['wadpack_contract'] == 2
           assert version['wadpack_entries'] == 18
+          assert version['bundle_contract'] == 1
+          assert version['bundle_name'] == 'sol.pk3'
           assert project['version'] == '0.1.0'
           assert project['engine_package'] == 'sol-e1m1-v0.1.0.pk3'
           assert project['wadpack_contract'] == 2
+          assert project['bundle_contract'] == 1
+          assert project['runtime_bundle'] == 'sol.pk3'
           assert wadpack['version'] == '0.1.0'
           assert len(wadpack['load_order']) == 18
           tail = wadpack['load_order'][-4:]
@@ -84,7 +91,9 @@ jobs:
               '18-targetspy-v3.1.0.pk3',
           ]
           PY
-      - name: Verify setup, cockpit, wadpack, and launchers
+          test -s THIRD_PARTY.md
+          grep -F 'local-build runtime artifact' THIRD_PARTY.md
+      - name: Verify setup, cockpit, wadpack, bundle, and launchers
         run: |
           for test_script in tests/test-sol-*.sh; do
             bash "$test_script"
@@ -99,11 +108,11 @@ jobs:
           ! grep -R -F 'Transition Seam' tools/sol-generate-e1m1.py sol-project/maps/e1m1/layout.svg
       - name: Verify pinned DoomTools revision
         run: bash tools/sol-bootstrap-doomtools.sh --verify-only
-      - name: Build graybox package
+      - name: Build graybox component package
         env:
           SOL_SKIP_DOOMTOOLS: '1'
         run: bash tools/sol-build.sh
-      - name: Inspect package and branding
+      - name: Inspect component package and branding
         run: |
           archive=$(find build/sol -maxdepth 1 -name 'sol-e1m1-v0.1.0.pk3' -print -quit)
           test -n "$archive"
