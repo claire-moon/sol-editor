@@ -1,21 +1,79 @@
 #!/usr/bin/env python3
-"""Generate SOL's deterministic E1M1 UDMF graybox without IWAD data."""
-import argparse, hashlib, json, struct
+"""Generate SOL's deterministic E1M1 systems-test PWAD without IWAD data."""
+
+import argparse
+import hashlib
+import json
+import struct
+
 from pathlib import Path
 
-NAMES = [
-    "Arrival Lock", "Arrival Connector", "Hangar Floor", "Security Connector",
-    "Security Spine", "Maintenance Descent", "Processing / Maintenance",
-    "Reactor Connector", "Reactor Annex", "Exterior Airlock", "Exterior Breach",
-    "Command Lift", "Command Return", "Exit Control",
-]
-WIDTH = 512
-HEIGHT = 512
-MONSTER_TYPES = [3004, 9, 3001, 3002]
+
+CELL = 512
+
+CELLS = {
+    (0, 3): "Arrival",
+    (1, 3): "Security",
+    (2, 2): "Atrium",
+    (2, 3): "Atrium",
+    (2, 4): "Atrium",
+    (3, 2): "Atrium",
+    (3, 3): "Atrium",
+    (3, 4): "Atrium",
+    (3, 1): "Storage",
+    (4, 1): "Storage",
+    (5, 1): "Service",
+    (5, 2): "Service",
+    (4, 3): "Control",
+    (5, 3): "Control",
+    (6, 2): "Control",
+    (6, 3): "Control",
+    (3, 5): "Laboratory",
+    (4, 5): "Laboratory",
+    (5, 5): "Laboratory",
+    (5, 6): "Laboratory",
+    (6, 6): "Laboratory",
+    (6, 4): "Reactor",
+    (6, 5): "Reactor",
+    (7, 4): "Reactor",
+    (7, 5): "Reactor",
+    (7, 2): "Courtyard",
+    (7, 3): "Courtyard",
+    (8, 2): "Courtyard",
+    (8, 3): "Courtyard",
+    (8, 4): "Courtyard",
+    (9, 2): "Courtyard",
+    (9, 3): "Courtyard",
+    (9, 4): "Courtyard",
+    (9, 5): "Exit",
+    (10, 5): "Exit",
+    (10, 4): "Exit",
+}
+
+THEMES = {
+    "Arrival": ("STARTAN3", "FLOOR4_8", "CEIL3_5", 176, 0, 144),
+    "Security": ("STARGR2", "FLOOR4_6", "CEIL3_5", 160, 0, 144),
+    "Atrium": ("BROWN1", "FLOOR5_1", "CEIL5_1", 192, 0, 224),
+    "Storage": ("GRAY1", "FLOOR4_8", "CEIL3_5", 128, 8, 136),
+    "Service": ("ICKWALL1", "NUKAGE1", "CEIL1_1", 96, 0, 128),
+    "Control": ("COMPSPAN", "FLOOR4_6", "CEIL5_1", 176, 16, 176),
+    "Laboratory": ("TEKWALL1", "FLAT14", "CEIL5_1", 208, 0, 160),
+    "Reactor": ("METAL1", "NUKAGE1", "CEIL5_1", 112, -8, 192),
+    "Courtyard": ("STONE2", "FLAT14", "F_SKY1", 224, 0, 256),
+    "Exit": ("STARTAN3", "FLOOR4_8", "CEIL3_5", 160, 0, 144),
+}
+
+MONSTER_TYPES = (3004, 9, 3001, 3002, 58, 3005, 3006, 3003)
+WEAPON_TYPES = (2001, 2002, 2003, 2004, 2005, 2006)
+DECORATION_TYPES = (2035, 34, 35, 44, 45, 46, 55, 56, 57, 15, 18, 19, 20, 21, 22)
+
+EXIT_CELL = (10, 4)
+EXIT_EDGE = "east"
 
 
 def block(kind, values):
     lines = [kind, "{"]
+
     for key, value in values:
         if isinstance(value, str):
             lines.append(f'    {key} = "{value}";')
@@ -25,83 +83,262 @@ def block(kind, values):
             lines.append(f"    {key} = {value:.1f};")
         else:
             lines.append(f"    {key} = {value};")
+
     lines.append("}\n")
     return "\n".join(lines)
 
 
-def make_textmap():
-    out = ['namespace = "ZDoom";\n']
-    for x in range(0, (len(NAMES) + 1) * WIDTH, WIDTH):
-        out.append(block("vertex", [("x", float(x)), ("y", 0.0)]))
-        out.append(block("vertex", [("x", float(x)), ("y", float(HEIGHT))]))
+def cell_edges(gx, gy):
+    x = gx * CELL
+    y = gy * CELL
+
+    return (
+        ("south", (x + CELL, y), (x, y)),
+        ("west", (x, y), (x, y + CELL)),
+        ("north", (x, y + CELL), (x + CELL, y + CELL)),
+        ("east", (x + CELL, y + CELL), (x + CELL, y)),
+    )
+
+
+def make_geometry():
+    sectors = []
+    edges = {}
+
+    ordered_cells = sorted(CELLS, key=lambda point: (point[1], point[0]))
+    sector_by_cell = {cell: index for index, cell in enumerate(ordered_cells)}
+
+    for cell in ordered_cells:
+        theme_name = CELLS[cell]
+        wall, floor, ceiling, light, floor_height, ceiling_height = THEMES[theme_name]
+        sectors.append({
+            "cell": cell,
+            "name": theme_name,
+            "wall": wall,
+            "floor": floor,
+            "ceiling": ceiling,
+            "light": light,
+            "floor_height": floor_height,
+            "ceiling_height": ceiling_height,
+        })
+
+        gx, gy = cell
+        for edge_name, p1, p2 in cell_edges(gx, gy):
+            key = tuple(sorted((p1, p2)))
+            edges.setdefault(key, []).append({
+                "sector": sector_by_cell[cell],
+                "edge_name": edge_name,
+                "p1": p1,
+                "p2": p2,
+                "wall": wall,
+                "cell": cell,
+            })
+
+    vertices = []
+    vertex_lookup = {}
+
+    def vertex(point):
+        if point not in vertex_lookup:
+            vertex_lookup[point] = len(vertices)
+            vertices.append(point)
+        return vertex_lookup[point]
 
     sidedefs = []
     linedefs = []
-    def side(sector, middle="-"):
+
+    def side(sector, top="-", bottom="-", middle="-"):
         index = len(sidedefs)
-        sidedefs.append((sector, middle))
+        sidedefs.append({
+            "sector": sector,
+            "texturetop": top,
+            "texturebottom": bottom,
+            "texturemiddle": middle,
+        })
         return index
 
-    for room in range(len(NAMES)):
-        left = room * 2
-        right = (room + 1) * 2
-        for v1, v2 in ((left, right), (right + 1, left + 1)):
-            linedefs.append((v1, v2, side(room, "STARTAN3"), -1, 0, False))
+    for key in sorted(edges):
+        owners = edges[key]
 
-    linedefs.append((1, 0, side(0, "STARTAN3"), -1, 0, False))
-    for room in range(1, len(NAMES)):
-        bottom = room * 2
-        top = bottom + 1
-        linedefs.append((bottom, top, side(room - 1), side(room), 0, False))
-    end_bottom = len(NAMES) * 2
-    end_top = end_bottom + 1
-    linedefs.append((end_bottom, end_top, side(len(NAMES) - 1, "SW1COMP"), -1, 243, True))
+        if len(owners) == 2:
+            first, second = owners
+            front = side(first["sector"], first["wall"], first["wall"], "-")
+            back = side(second["sector"], second["wall"], second["wall"], "-")
+            linedefs.append({
+                "v1": vertex(first["p1"]),
+                "v2": vertex(first["p2"]),
+                "sidefront": front,
+                "sideback": back,
+                "twosided": True,
+            })
+            continue
 
-    for sector, middle in sidedefs:
-        out.append(block("sidedef", [
-            ("sector", sector), ("texturetop", "-"),
-            ("texturebottom", "-"), ("texturemiddle", middle),
-        ]))
-    for v1, v2, front, back, special, use in linedefs:
-        values = [("v1", v1), ("v2", v2), ("sidefront", front)]
-        if back >= 0:
-            values += [("sideback", back), ("twosided", True)]
-        if special:
-            values += [("special", special), ("playeruse", use)]
-        out.append(block("linedef", values))
-    for index, name in enumerate(NAMES):
-        out.append(f"// sector {index}: {name}\n")
+        if len(owners) != 1:
+            raise RuntimeError(f"non-manifold testbed edge: {key}")
+
+        owner = owners[0]
+        is_exit = owner["cell"] == EXIT_CELL and owner["edge_name"] == EXIT_EDGE
+        middle = "SW1COMP" if is_exit else owner["wall"]
+        front = side(owner["sector"], "-", "-", middle)
+        linedef = {
+            "v1": vertex(owner["p1"]),
+            "v2": vertex(owner["p2"]),
+            "sidefront": front,
+        }
+
+        if is_exit:
+            linedef["special"] = 243
+            linedef["playeruse"] = True
+
+        linedefs.append(linedef)
+
+    return ordered_cells, sectors, vertices, sidedefs, linedefs
+
+
+def add_thing(things, x, y, thing_type, angle=0):
+    things.append({
+        "x": float(x),
+        "y": float(y),
+        "angle": angle,
+        "type": thing_type,
+    })
+
+
+def make_things(ordered_cells):
+    things = []
+
+    add_thing(things, 128, 3 * CELL + 256, 1, 0)
+    add_thing(things, 176, 3 * CELL + 208, 2, 0)
+    add_thing(things, 176, 3 * CELL + 304, 3, 0)
+    add_thing(things, 224, 3 * CELL + 256, 4, 0)
+
+    weapon_cells = (
+        ((1, 3), 2001),
+        ((3, 1), 2002),
+        ((4, 5), 2005),
+        ((6, 4), 2003),
+        ((8, 3), 2004),
+        ((10, 5), 2006),
+    )
+    for (gx, gy), thing_type in weapon_cells:
+        add_thing(things, gx * CELL + 256, gy * CELL + 256, thing_type)
+
+    supply_types = (2007, 2008, 2010, 2047, 2011, 2012, 2014, 2015, 2018, 2019, 2023, 2013)
+    for index, (gx, gy) in enumerate(ordered_cells):
+        if index % 2 == 0:
+            add_thing(
+                things,
+                gx * CELL + 128,
+                gy * CELL + 128,
+                supply_types[index % len(supply_types)],
+                (index * 29) % 360,
+            )
+
+    monster_count = 0
+    for index, (gx, gy) in enumerate(ordered_cells):
+        theme = CELLS[(gx, gy)]
+        if theme == "Arrival":
+            count = 1
+        elif theme in {"Service", "Laboratory", "Control", "Exit"}:
+            count = 2
+        elif theme in {"Atrium", "Reactor", "Courtyard"}:
+            count = 3
+        else:
+            count = 2
+
+        positions = ((160, 160), (352, 352), (352, 160))
+        for slot in range(count):
+            dx, dy = positions[slot]
+            monster_type = MONSTER_TYPES[(index + slot * 3) % len(MONSTER_TYPES)]
+            add_thing(
+                things,
+                gx * CELL + dx,
+                gy * CELL + dy,
+                monster_type,
+                (index * 37 + slot * 120) % 360,
+            )
+            monster_count += 1
+
+    decoration_count = 0
+    for index, (gx, gy) in enumerate(ordered_cells):
+        decoration_types = (
+            2035,
+            DECORATION_TYPES[(index + 3) % len(DECORATION_TYPES)],
+            DECORATION_TYPES[(index + 8) % len(DECORATION_TYPES)],
+        )
+        decoration_positions = ((96, 416), (416, 96), (416, 416))
+
+        for slot, thing_type in enumerate(decoration_types):
+            dx, dy = decoration_positions[slot]
+            add_thing(
+                things,
+                gx * CELL + dx,
+                gy * CELL + dy,
+                thing_type,
+                (index * 19 + slot * 90) % 360,
+            )
+            decoration_count += 1
+
+    return things, monster_count, decoration_count
+
+
+def make_textmap():
+    ordered_cells, sectors, vertices, sidedefs, linedefs = make_geometry()
+    things, monster_count, decoration_count = make_things(ordered_cells)
+    out = ['namespace = "ZDoom";\n']
+
+    for x, y in vertices:
+        out.append(block("vertex", [("x", float(x)), ("y", float(y))]))
+
+    for sidedef in sidedefs:
+        out.append(block("sidedef", list(sidedef.items())))
+
+    for linedef in linedefs:
+        out.append(block("linedef", list(linedef.items())))
+
+    for index, sector in enumerate(sectors):
+        gx, gy = sector["cell"]
+        out.append(f'// sector {index}: {sector["name"]} cell {gx},{gy}\n')
         out.append(block("sector", [
-            ("heightfloor", 0), ("heightceiling", 160 if index not in (2, 8, 10) else 224),
-            ("texturefloor", "FLOOR4_8"), ("textureceiling", "CEIL3_5"),
-            ("lightlevel", 144 if index % 3 else 176),
+            ("heightfloor", sector["floor_height"]),
+            ("heightceiling", sector["ceiling_height"]),
+            ("texturefloor", sector["floor"]),
+            ("textureceiling", sector["ceiling"]),
+            ("lightlevel", sector["light"]),
         ]))
 
-    things = [
-        (64, 256, 1, 0),
-        (640, 256, 2001, 0),
-        (1664, 256, 2002, 0),
-    ]
-    for i in range(176):
-        room = i % len(NAMES)
-        slot = i // len(NAMES)
-        x = room * WIDTH + 96 + (slot % 4) * 96
-        y = 72 + ((slot // 4) % 4) * 112
-        things.append((x, y, MONSTER_TYPES[(room + slot) % len(MONSTER_TYPES)], (i * 37) % 360))
-    for room in range(1, len(NAMES), 2):
-        things.append((room * WIDTH + 256, 96, 2011, 0))
-        things.append((room * WIDTH + 256, 416, 2007, 0))
-    for x, y, thing_type, angle in things:
-        out.append(block("thing", [
-            ("x", float(x)), ("y", float(y)), ("angle", angle), ("type", thing_type),
-            ("skill1", True), ("skill2", True), ("skill3", True),
-            ("skill4", True), ("skill5", True), ("single", True), ("coop", True),
-        ]))
+    for thing in things:
+        values = list(thing.items())
+        values.extend([
+            ("skill1", True),
+            ("skill2", True),
+            ("skill3", True),
+            ("skill4", True),
+            ("skill5", True),
+            ("single", True),
+            ("coop", True),
+        ])
+        out.append(block("thing", values))
+
+    min_x = min(x for x, _ in ordered_cells) * CELL
+    min_y = min(y for _, y in ordered_cells) * CELL
+    max_x = (max(x for x, _ in ordered_cells) + 1) * CELL
+    max_y = (max(y for _, y in ordered_cells) + 1) * CELL
+
     stats = {
-        "map": "E1M1", "version": "0.1.0", "vertices": 30,
-        "linedefs": len(linedefs), "sidedefs": len(sidedefs), "sectors": 14,
-        "things": len(things), "monsters": 176,
+        "map": "E1M1",
+        "version": "0.4.0",
+        "testbed_contract": 1,
+        "bounds": [min_x, min_y, max_x, max_y],
+        "vertices": len(vertices),
+        "linedefs": len(linedefs),
+        "sidedefs": len(sidedefs),
+        "sectors": len(sectors),
+        "things": len(things),
+        "monsters": monster_count,
+        "decorations": decoration_count,
+        "weapons": len(WEAPON_TYPES),
+        "rooms": len(set(CELLS.values())),
     }
+
     return "\n".join(out).encode(), stats
 
 
@@ -109,24 +346,49 @@ def wad(textmap):
     lumps = [(b"E1M1", b""), (b"TEXTMAP", textmap), (b"ENDMAP", b"")]
     data = bytearray(b"PWAD" + struct.pack("<II", len(lumps), 0))
     entries = []
+
     for name, content in lumps:
         entries.append((len(data), len(content), name))
         data.extend(content)
+
     directory = len(data)
     for offset, size, name in entries:
         data.extend(struct.pack("<II8s", offset, size, name.ljust(8, b"\0")))
+
     struct.pack_into("<I", data, 8, directory)
     return bytes(data)
 
 
 def svg():
-    width = len(NAMES) * 150
-    boxes = []
-    for i, name in enumerate(NAMES):
-        x = i * 150
-        boxes.append(f'<rect x="{x}" y="20" width="140" height="80" fill="#59656a" stroke="#d7e8df"/>')
-        boxes.append(f'<text x="{x+70}" y="58" text-anchor="middle" fill="white" font-size="11">{name}</text>')
-    return ('<svg xmlns="http://www.w3.org/2000/svg" width="%d" height="120">%s</svg>\n' % (width, ''.join(boxes))).encode()
+    cells = sorted(CELLS, key=lambda point: (point[1], point[0]))
+    scale = 72
+    margin = 24
+    max_x = max(x for x, _ in cells)
+    max_y = max(y for _, y in cells)
+    width = (max_x + 1) * scale + margin * 2
+    height = (max_y + 1) * scale + margin * 2
+    parts = [
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" '
+        f'viewBox="0 0 {width} {height}">',
+        '<rect width="100%" height="100%" fill="#15191c"/>',
+    ]
+
+    for gx, gy in cells:
+        room = CELLS[(gx, gy)]
+        x = margin + gx * scale
+        y = margin + (max_y - gy) * scale
+        parts.append(
+            f'<rect x="{x}" y="{y}" width="{scale}" height="{scale}" '
+            'fill="#59656a" stroke="#d7e8df" stroke-width="2"/>'
+        )
+        parts.append(
+            f'<text x="{x + scale / 2}" y="{y + scale / 2}" '
+            'text-anchor="middle" dominant-baseline="middle" fill="white" '
+            f'font-family="sans-serif" font-size="9">{room}</text>'
+        )
+
+    parts.append("</svg>\n")
+    return "".join(parts).encode()
 
 
 def main():
@@ -134,6 +396,7 @@ def main():
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=True)
+
     textmap, stats = make_textmap()
     outputs = {
         "TEXTMAP.txt": textmap,
@@ -141,9 +404,12 @@ def main():
         "stats.json": (json.dumps(stats, indent=2, sort_keys=True) + "\n").encode(),
         "layout.svg": svg(),
     }
+
     for name, content in outputs.items():
         (args.output / name).write_bytes(content)
+
     print(args.output / "E1M1.wad", hashlib.sha256(outputs["E1M1.wad"]).hexdigest())
+
 
 if __name__ == "__main__":
     main()
