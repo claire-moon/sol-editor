@@ -27,12 +27,24 @@ for argument in "$@"; do
     [[ $argument == -iwad ]] && has_iwad=1
 done
 
-args=(-file "$bundle")
+args=()
 if ((has_iwad == 0)); then
-    args=(-iwad "$DOOM_IWAD" "${args[@]}")
+    args=(-iwad "$(realpath "$DOOM_IWAD")")
 fi
 
-# UZDoom recursively mounts sol.pk3's numbered native embedded carriers. UDB's
-# temporary map/resource arguments follow the bundle and therefore retain final
-# test-map precedence without duplicating the eighteen authoring resources.
+# Native SOL Engine mounts the verified sidecar itself. Keep one compatibility
+# path for pre-v0.3 UZDoom binaries; UDB's temporary map arguments always follow
+# the canonical bundle and retain final test-map precedence.
+is_native_sol_engine() {
+    local name
+    for name in "$(basename "$1")" "$(basename "$(realpath "$1")")"; do
+        case $name in
+            sol-engine|sol-engine.exe|*SOL-Engine*.AppImage) return 0 ;;
+        esac
+    done
+    return 1
+}
+if ! is_native_sol_engine "$SOL_ENGINE"; then
+    args+=(-file "$bundle")
+fi
 exec "$SOL_ENGINE" "${args[@]}" "$@"

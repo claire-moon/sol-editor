@@ -59,7 +59,7 @@ while (($#)); do
         --engine) require_arg "$@"; engine_override=$2; shift 2 ;;
         --editor) require_arg "$@"; editor_override=$2; shift 2 ;;
         --iwad) require_arg "$@"; iwad_override=$2; shift 2 ;;
-        --link-iwad) install_mode=link; shift ;;
+        --link-iwad) install_mode='link'; shift ;;
         --workspace) require_arg "$@"; workspace=$2; shift 2 ;;
         --engine-root) require_arg "$@"; engine_root=$2; shift 2 ;;
         --vend) require_arg "$@"; vend_root=$2; shift 2 ;;
@@ -124,6 +124,12 @@ is_iwad() {
     [[ $magic == IWAD ]]
 }
 
+is_supported_iwad() {
+    local name=${1##*/}
+    name=${name,,}
+    [[ $name == doom.wad || $name == doomu.wad ]] && is_iwad "$1"
+}
+
 load_env() {
     [[ -f $env_file ]] || return 1
     set -a
@@ -139,7 +145,7 @@ env_valid() {
         [[ -x ${SOL_ENGINE:-} ]] || exit 1
         [[ -x ${SOL_EDITOR:-} ]] || exit 1
         [[ -f ${SOL_RUNTIME_PKG:-} ]] || exit 1
-        is_iwad "${DOOM_IWAD:-}" || exit 1
+        is_supported_iwad "${DOOM_IWAD:-}" || exit 1
     )
 }
 
@@ -233,7 +239,7 @@ scan_iwads() {
     declare -A seen=()
     shopt -s nullglob nocaseglob
     for path in "$vend_root/iwads"/*.wad; do
-        if is_iwad "$path"; then
+        if is_supported_iwad "$path"; then
             path=$(realpath "$path")
             [[ -n ${seen[$path]:-} ]] || { seen[$path]=1; printf '%s\n' "$path"; }
         fi
@@ -252,9 +258,7 @@ scan_iwads() {
                 [[ -n ${seen[$path]:-} ]] || { seen[$path]=1; printf '%s\n' "$path"; }
             fi
         done < <(find "$search_root" -maxdepth 5 -type f \
-            \( -iname doom.wad -o -iname doom1.wad -o -iname doom2.wad \
-               -o -iname tnt.wad -o -iname plutonia.wad \
-               -o -iname freedoom1.wad -o -iname freedoom2.wad \) \
+            \( -iname doom.wad -o -iname doomu.wad \) \
             -print0 2>/dev/null)
     done
 }
@@ -276,7 +280,7 @@ select_iwad_with_mc() {
         start_dir=$(dirname "${candidates[0]}")
     fi
     printf '\nMidnight Commander IWAD selector\n'
-    printf '1. Browse to DOOM.WAD, DOOM2.WAD, or another legally owned IWAD.\n'
+    printf '1. Browse to your Doom DOOM.WAD or DOOMU.WAD; the engine validates it at launch.\n'
     printf '2. Highlight the file.\n'
     printf '3. Press F2 and choose I to copy it, or L to link it.\n'
     printf '4. Press F10 to return to the wizard.\n\n'
@@ -288,8 +292,8 @@ select_iwad_with_mc() {
         exit 1
     fi
     candidate=$(cat "$selected_file")
-    is_iwad "$candidate" || {
-        printf 'The selected file is not a valid IWAD: %s\n' "$candidate" >&2
+    is_supported_iwad "$candidate" || {
+        printf 'The selected file is not a supported Doom IWAD: %s\n' "$candidate" >&2
         exit 1
     }
     selected_iwad_result=$candidate
@@ -359,7 +363,7 @@ print_status() {
         [[ -x ${SOL_ENGINE:-} ]] && { engine_state=PASS; engine=$SOL_ENGINE; }
         [[ -x ${SOL_EDITOR:-} ]] && { editor_state=PASS; editor=$SOL_EDITOR; }
         [[ -f ${SOL_RUNTIME_PKG:-} ]] && { runtime_state=PASS; runtime=$SOL_RUNTIME_PKG; }
-        if is_iwad "${DOOM_IWAD:-}"; then iwad_state=PASS; iwad=$DOOM_IWAD; fi
+        if is_supported_iwad "${DOOM_IWAD:-}"; then iwad_state=PASS; iwad=$DOOM_IWAD; fi
     fi
     cat <<STATUS
 SOL SETUP COCKPIT
@@ -392,7 +396,7 @@ verify_setup() {
     printf 'PASS: sol-engine executable: %s\n' "$SOL_ENGINE"
     printf 'PASS: sol-editor launcher: %s\n' "$SOL_EDITOR"
     printf 'PASS: runtime package: %s\n' "$SOL_RUNTIME_PKG"
-    printf 'PASS: IWAD header: %s\n' "$DOOM_IWAD"
+    printf 'PASS: Doom IWAD candidate (engine validation occurs at launch): %s\n' "$DOOM_IWAD"
     if ! bash "$engine_root/tools/sol-package.sh" >/dev/null; then
         printf 'FAIL: runtime package regeneration failed.\n' >&2
         failed=1
@@ -424,8 +428,8 @@ run_setup() {
 
     say_stage 2 5 'Select a user-owned Doom IWAD'
     if [[ -n $iwad_override ]]; then
-        is_iwad "$iwad_override" || {
-            printf 'Invalid IWAD: %s\n' "$iwad_override" >&2
+        is_supported_iwad "$iwad_override" || {
+            printf 'Select a Doom IWAD candidate named DOOM.WAD or DOOMU.WAD; SOL Engine validates its contents at launch: %s\n' "$iwad_override" >&2
             exit 1
         }
         iwad=$(realpath "$iwad_override")

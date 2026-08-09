@@ -18,11 +18,11 @@ printf 'editor %s\n' "$*"
 EDITOR
 chmod +x "$tmp/editor"
 
-cat > "$tmp/engine" <<'ENGINE'
+cat > "$tmp/sol-engine" <<'ENGINE'
 #!/usr/bin/env bash
 printf 'engine %s\n' "$*"
 ENGINE
-chmod +x "$tmp/engine"
+chmod +x "$tmp/sol-engine"
 
 cat > "$tmp/manifest.json" <<'JSON'
 {
@@ -36,6 +36,7 @@ cat > "$tmp/version.json" <<'JSON'
 {
   "project": "SOL Editor launcher fixture",
   "version": "0.2.0",
+  "bundle_version": "0.3.0",
   "wadpack_contract": 99,
   "wadpack_entries": 0,
   "bundle_contract": 1,
@@ -65,7 +66,7 @@ python3 "$root/tools/sol-bundle.py" build \
 
 cat > "$tmp/sol.env" <<ENV
 export SOL_EDITOR='$tmp/editor'
-export SOL_ENGINE='$tmp/engine'
+export SOL_ENGINE='$tmp/sol-engine'
 export SOL_ENGINE_ROOT='$tmp/engine-root'
 export SOL_VEND_ROOT='$tmp/vend'
 export SOL_WADPACK_MANIFEST='$tmp/manifest.json'
@@ -78,6 +79,7 @@ ENV
 
 SOL_ENV_FILE="$tmp/sol.env" "$tmp/bin/sol-edit" --fixture | grep -F 'editor --fixture'
 play_output=$(SOL_ENV_FILE="$tmp/sol.env" "$tmp/bin/sol-play" E1M1)
-printf '%s\n' "$play_output" | grep -F "engine -iwad $tmp/doom.wad -file $tmp/sol.pk3 +map E1M1"
+printf '%s\n' "$play_output" | grep -F "engine -iwad $tmp/doom.wad +map E1M1"
+! printf '%s\n' "$play_output" | grep -F -- '-file'
 
 printf 'symlink launcher and native-bundle tests passed\n'

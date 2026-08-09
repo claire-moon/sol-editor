@@ -1,10 +1,15 @@
 # SOL branding
 
-The shared SOL engine/editor icon was approved on 2026-08-06.
+The SOL project owner supplied a visual reference on 2026-08-08 for the shared
+SOL Engine and SOL Editor identity. The reference was used only as design input;
+it is not stored in or distributed by this repository.
 
-- `sol-icon-master.png` preserves the supplied source bytes unchanged.
-- `sol-icon.ico` is the padded Windows derivative.
-- `Source/Core/Resources/UDB2.ico` uses that derivative for Windows and Mono editor builds.
-- The editor ICO uses an uncompressed 24-bit bitmap frame because Mono's legacy `System.Drawing.Icon` reader rejects PNG-compressed ICO frames during `.resx` compilation.
+`sol-celestial-master.png` is the original generated raster master created for
+SOL under the project owner's direction. `sol-icon.ico` and the editor
+application, about, and Flatpak icons are mechanical derivatives of that
+master. The master and those derivatives are SOL project assets distributed
+under GPL-3.0-or-later with the rest of this repository.
 
-Additional package sizes are generated from the master image when installers are introduced. Do not redraw, recolor, label, or split the engine/editor identity without a recorded design decision. Creator, copyright holder, and distribution license must be recorded before the first public binary release.
+The earlier `sol-icon-master.png` is retained for history but is no longer the
+active identity source. Do not independently redraw or split the engine/editor
+identity without a recorded design decision.

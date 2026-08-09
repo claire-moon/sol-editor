@@ -16,8 +16,8 @@ Usage: tools/sol-build-engine.sh [--detect] [--install-deps] [--clean]
 
 Build or locate the executable produced by the sibling sol-engine checkout.
 When the complete local SOL wadpack is available, also refresh sol.pk3 and copy
-it beside the engine executable. The self-contained `sol-engine` launcher is
-installed beside the UZDoom binary on every successful local build.
+it beside the engine executable. Current checkouts use the native `sol-engine`
+binary; legacy UZDoom executables remain detectable for older worktrees.
 USAGE
 }
 
@@ -40,8 +40,50 @@ build_dir=$(realpath -m "$build_dir")
 
 find_engine() {
     local candidate
+
+    emit_candidate() {
+        local path=$1
+        [[ -n $path && -x $path ]] || return 1
+        # Never rediscover the pre-v0.3 shell launcher as the native engine.
+        if [[ $(basename "$path") == sol-engine ]] &&
+           grep -q 'launcher_dir=.*BASH_SOURCE' "$path" 2>/dev/null; then
+            return 1
+        fi
+        realpath "$path"
+    }
+
+    # An explicit override wins, including an intentionally selected legacy
+    # binary. Automatic discovery always prefers the native SOL executable.
+    if emit_candidate "${SOL_ENGINE:-}"; then
+        return 0
+    fi
     for candidate in \
-        "${SOL_ENGINE:-}" \
+        "$build_dir/sol-engine" \
+        "$build_dir/sol-engine.exe" \
+        "$build_dir/Release/sol-engine" \
+        "$build_dir/Release/sol-engine.exe" \
+        "$engine_root/build/sol-v030/sol-engine" \
+        "$engine_root/build/sol-v030/sol-engine.exe" \
+        "$engine_root/build/sol-v030/Release/sol-engine" \
+        "$engine_root/build/sol-v030/Release/sol-engine.exe" \
+        "$engine_root/build/sol-engine" \
+        "$engine_root/build/sol-engine.exe" \
+        "$engine_root/build/Release/sol-engine" \
+        "$engine_root/build/Release/sol-engine.exe"; do
+        if emit_candidate "$candidate"; then
+            return 0
+        fi
+    done
+    while IFS= read -r -d '' candidate; do
+        if emit_candidate "$candidate"; then
+            return 0
+        fi
+    done < <(find "$engine_root/build" -maxdepth 5 -type f \
+        \( -name sol-engine -o -name sol-engine.exe -o \
+           -name '*SOL-Engine*.AppImage' \) \
+        -perm -111 -print0 2>/dev/null || true)
+
+    for candidate in \
         "$build_dir/uzdoom" \
         "$build_dir/Release/uzdoom" \
         "$engine_root/build/uzdoom" \
@@ -49,18 +91,17 @@ find_engine() {
         "$engine_root/build/Debug/uzdoom" \
         "$engine_root/build/src/uzdoom" \
         "$engine_root/uzdoom"; do
-        if [[ -n $candidate && -x $candidate ]]; then
-            realpath "$candidate"
+        if emit_candidate "$candidate"; then
             return 0
         fi
     done
-    candidate=$(find "$engine_root/build" -maxdepth 4 -type f \
+    while IFS= read -r -d '' candidate; do
+        if emit_candidate "$candidate"; then
+            return 0
+        fi
+    done < <(find "$engine_root/build" -maxdepth 5 -type f \
         \( -name uzdoom -o -name 'UZDoom*.AppImage' \) \
-        -perm -111 -print -quit 2>/dev/null || true)
-    if [[ -n $candidate ]]; then
-        realpath "$candidate"
-        return 0
-    fi
+        -perm -111 -print0 2>/dev/null || true)
     return 1
 }
 
@@ -131,10 +172,9 @@ engine=$(find_engine) || {
     printf 'sol-engine built without producing a detectable executable.\n' >&2
     exit 1
 }
-engine_dir=$(dirname "$engine")
-if [[ -f $engine_root/tools/sol-launcher.sh ]]; then
-    install -m 0755 "$engine_root/tools/sol-launcher.sh" "$engine_dir/sol-engine"
-fi
+
+# Never install a shell wrapper over the native v0.3 executable. Legacy
+# UZDoom checkouts remain detectable by their own binary name for old trees.
 
 # Packaging must never turn a successful compile into a failure while the local
 # third-party build inputs are still being collected. Once they are complete,
@@ -143,6 +183,7 @@ if [[ -f $editor_root/tools/sol-bundle.sh ]]; then
     SOL_ENGINE="$engine" \
     SOL_ENGINE_ROOT="$engine_root" \
     SOL_EDITOR_ROOT="$editor_root" \
+    SOL_VERSION_FILE="$engine_root/sol/version.json" \
     SOL_BUNDLE_NO_SETUP=1 \
         bash "$editor_root/tools/sol-bundle.sh" >/dev/null 2>&1 || true
 fi

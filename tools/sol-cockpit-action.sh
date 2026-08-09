@@ -20,6 +20,12 @@ is_iwad() {
     [[ $magic == IWAD ]]
 }
 
+is_supported_iwad() {
+    local name=${1##*/}
+    name=${name,,}
+    [[ $name == doom.wad || $name == doomu.wad ]] && is_iwad "$1"
+}
+
 pause_if_tty() {
     if [[ -t 0 && -t 1 && ${SOL_COCKPIT_NO_PAUSE:-0} != 1 ]]; then
         printf '\nPress Enter to return to the SOL cockpit.'
@@ -41,8 +47,8 @@ case $action in
             exit 1
         fi
         source_path=$(realpath "$source_path")
-        if ! is_iwad "$source_path"; then
-            printf 'Rejected file without an IWAD header: %s\n' "$source_path" >&2
+        if ! is_supported_iwad "$source_path"; then
+            printf 'Select a Doom IWAD candidate named DOOM.WAD or DOOMU.WAD; SOL Engine validates its contents at launch: %s\n' "$source_path" >&2
             pause_if_tty
             exit 1
         fi

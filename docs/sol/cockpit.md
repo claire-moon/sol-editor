@@ -12,7 +12,7 @@ not changed.
 ## Locked wadpack stage
 
 Wadpack contract 2 requires all eighteen approved resources. `sol-play` and
-`sol-edit` trigger the importer when no valid self-contained `sol.pk3` exists
+`sol-edit` trigger the importer when no valid canonical `sol.pk3` exists
 and the local build inputs are incomplete:
 
 ```bash
@@ -31,7 +31,7 @@ bash tools/sol-wadpack-setup.sh --status
 
 to inspect all eighteen build inputs.
 
-## Build the self-contained runtime
+## Build the canonical runtime bundle
 
 After all eighteen entries pass:
 
@@ -47,9 +47,10 @@ build/sol/sol.pk3
 
 The bundle contains the eighteen normalized resources, SOL runtime, E1M1
 content, component hashes, and third-party attribution. Each component is stored
-intact under a numbered root-level `.wad` carrier so UZDoom's native embedded-
-resource loader recursively mounts the complete stack from one `-file sol.pk3`.
-The same bundle is copied into local engine/editor package directories.
+intact under a numbered root-level `.wad` carrier for the embedded-resource
+loader inherited by SOL Engine. The editor writes bundle version 0.3.0 into
+`SOLPACK.json`, and the native engine validates and mounts the adjacent file at
+startup. The same bundle is copied into local engine/editor package directories.
 
 Once a valid `sol.pk3` exists, normal gameplay and editor playtests operate from
 that one file without the loose `vend/wadpack/runtime` files. In a development
@@ -65,13 +66,22 @@ sol-play E1M1
 sol-edit
 ```
 
-`sol-play` passes the single `sol.pk3` to UZDoom; UZDoom mounts the embedded
-01→20 stack natively. `sol-edit` materializes only the eighteen authoring
-resources for UDB's resource browser. In-editor tests return to the native
-one-file `sol.pk3` path, followed by UDB's temporary map.
+`sol-play` starts native SOL Engine without passing `-file sol.pk3`; the engine
+loads its verified adjacent sidecar and mounts the embedded 01→20 stack.
+`sol-edit` materializes only the eighteen authoring resources for UDB's resource
+browser. In-editor tests use the same sidecar and append UDB's temporary map so
+the test map retains final precedence. Older UZDoom development binaries remain
+supported through a compatibility path that passes `-file sol.pk3` explicitly.
 
-Local engine builds also install a `sol-engine` launcher beside UZDoom and copy
-`sol.pk3` beside it, so that package can run without the sibling editor checkout.
+Local engine builds produce a native `sol-engine` executable. Editor tooling
+copies `sol.pk3` beside the detected executable and never replaces it with the
+obsolete shell launcher.
+
+Setup selects a user-owned Doom IWAD candidate named `DOOM.WAD` or
+`DOOMU.WAD`; other known Doom-family filenames are intentionally not selected.
+Native SOL Engine v0.3 inspects the contents at launch and is the final authority
+that accepts registered Doom/Ultimate Doom and rejects shareware or renamed
+unsupported data.
 
 See `docs/sol/wadpack.md` and `THIRD_PARTY.md` for packaging and attribution
 details.

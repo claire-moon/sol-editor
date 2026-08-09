@@ -45,10 +45,19 @@ bundle=$(SOL_BUNDLE="$bundle" bash "$root/tools/sol-bundle.sh")
 map_name=${1:-E1M1}
 if [[ $# -gt 0 ]]; then shift; fi
 
-# UZDoom natively recognizes the numbered root-level *.wad carrier members in
-# sol.pk3 as embedded resource files. Their bytes remain the original WAD/PK3
-# archives, so the engine recursively mounts 01 through 20 in lexical order.
-exec "$SOL_ENGINE" \
-    -iwad "$DOOM_IWAD" \
-    -file "$bundle" \
-    +map "$map_name" "$@"
+# Native SOL Engine validates and mounts the adjacent bundle itself. The
+# explicit map remains a development warp and therefore marks the run modified.
+args=(-iwad "$(realpath "$DOOM_IWAD")")
+is_native_sol_engine() {
+    local name
+    for name in "$(basename "$1")" "$(basename "$(realpath "$1")")"; do
+        case $name in
+            sol-engine|sol-engine.exe|*SOL-Engine*.AppImage) return 0 ;;
+        esac
+    done
+    return 1
+}
+if ! is_native_sol_engine "$SOL_ENGINE"; then
+    args+=(-file "$bundle")
+fi
+exec "$SOL_ENGINE" "${args[@]}" +map "$map_name" "$@"

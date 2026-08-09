@@ -6,9 +6,14 @@ test launches against the locally built `sol-engine` fork.
 
 ## Current release
 
-`v0.2.0` begins Phase 2 story authoring while preserving the deterministic E1M1
-graybox, classic Doom progression, shared branding, wadpack contract 2, and
-bundle contract 1 established by v0.1.0.
+`v0.2.0` preserves the deterministic E1M1 graybox, classic Doom progression,
+story contract 1 foundation, wadpack contract 2, and bundle contract 1. Story
+and production-map work are now parked during the engine-first roadmap.
+
+The editor remains at contract version 0.2.0 while it integrates with native
+SOL Engine v0.3.0. `sol/version.json` therefore records `bundle_version` 0.3.0
+separately: it is the version written to and verified in `SOLPACK.json`, not an
+editor or content-contract version bump.
 
 Story contract 1 adds a canonical authoring manifest, stable typed IDs, strict
 cross-reference validation, and packaging of the exact manifest into the map
@@ -26,10 +31,11 @@ SOL-owned engine runtime component, the current E1M1 content component,
 `SOLPACK.json`, and `THIRD_PARTY.md`.
 
 Each archive is stored byte-for-byte under a numbered root-level `.wad` carrier
-name. This uses UZDoom's native embedded-resource mechanism: UZDoom recognizes
-those root members as embedded archives, opens them by their actual file
-contents, and recursively mounts them in lexical 01→20 order. Gameplay therefore
-passes exactly one resource argument, `-file sol.pk3`.
+name. This uses the inherited native embedded-resource mechanism: SOL Engine
+recognizes those root members as embedded archives, opens them by their actual
+file contents, and recursively mounts them in lexical 01→20 order. The v0.3
+native engine validates and mounts the adjacent bundle without a
+`-file sol.pk3` argument.
 
 ## First run
 
@@ -51,11 +57,17 @@ bash tools/sol-package.sh
 Once a valid `sol.pk3` has been generated, normal SOL gameplay no longer depends
 on the loose `vend/wadpack/runtime` files.
 
+SOL Engine v0.3 accepts a user-owned registered Doom IWAD named `DOOM.WAD` or
+`DOOMU.WAD`. The setup cockpit selects only those filenames and does not select
+known Doom II, Freedoom, TNT, or Plutonia filenames. The native engine remains
+the authority that inspects the IWAD contents and rejects shareware, renamed
+unsupported IWADs, and other non-Doom-1 data before play begins.
+
 After setup:
 
 ```bash
 sol          # setup/status cockpit
-sol-play     # UZDoom loads one sol.pk3 and mounts its embedded stack natively
+sol-play     # native SOL Engine validates and mounts adjacent sol.pk3
 sol-edit     # editor authoring + tests use the same bundle contract
 ```
 
@@ -105,19 +117,20 @@ Bundle contract 1 adds the SOL-owned components after that stack:
 ```
 
 The carrier names inside `sol.pk3` are numbered root-level `.wad` names solely
-to activate UZDoom's existing embedded-resource handling. The bytes inside each
-carrier retain the original normalized WAD or PK3 format.
+to activate the embedded-resource handling inherited from UZDoom. The bytes
+inside each carrier retain the original normalized WAD or PK3 format.
 
-`sol-play` passes only `sol.pk3` to the engine. The editor still materializes
-entries 1–18 to their original normalized filenames for UDB's authoring-resource
-view, because UDB expects direct resource paths. In-editor playtests pass the
-single `sol.pk3` first and UDB's temporary map afterward, preserving test-map
-precedence.
+`sol-play` lets native SOL Engine mount adjacent `sol.pk3`. The editor still
+materializes entries 1–18 to their original normalized filenames for UDB's
+authoring-resource view, because UDB expects direct resource paths. In-editor
+playtests invoke the native engine and append UDB's temporary map afterward,
+preserving test-map precedence. A `-file` compatibility path remains only for
+pre-v0.3 UZDoom development binaries.
 
 The same `sol.pk3` is copied into `sol-editor/build/sol`, the editor `Build`
 directory when present, `sol-engine/build/sol`, and the configured engine build
-directory. Local engine builds also install the self-contained `sol-engine`
-launcher beside UZDoom; that launcher loads the adjacent `sol.pk3` by default.
+directory. Current engine builds produce the native `sol-engine` executable;
+editor tooling never overwrites it with the obsolete shell launcher.
 
 ## Attribution and redistribution
 
@@ -127,10 +140,12 @@ Cosmo ambience, Ambient decorations, TargetSpy, FinalCustomDoom, NashGore, and
 Voxel Doom provenance has been expanded from upstream project pages.
 
 Attribution does not itself grant redistribution rights. Several resources still
-need asset-level review, and the HQ PlayStation music/sound effects remain
-local-only proprietary audio. The complete `sol.pk3` is therefore a local-build
-runtime artifact and must not be published as a public SOL binary until the
-third-party audit is complete.
+need asset-level review. HQ PlayStation music is an accidental contract-2 input
+scheduled for retirement in engine v0.4.0; PlayStation sound effects remain a
+local placeholder pending original SOL replacements. Neither file is cleared
+for redistribution while present. The complete `sol.pk3` is therefore a
+local-build runtime artifact and must not be published as a public SOL binary
+until the third-party audit is complete.
 
 ## Repository layout
 
