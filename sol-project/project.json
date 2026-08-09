@@ -1,7 +1,8 @@
 {
-  "name": "SOL",
+  "name": "SOL!",
   "version": "0.4.0",
   "map": "E1M1",
+  "map_title": "TESTMAP",
   "format": "UDMF",
   "namespace": "ZDoom",
   "source": "tools/sol-generate-e1m1.py",
@@ -15,7 +16,8 @@
   "content_slot": 22,
   "soldefaults_contract": 1,
   "story_contract": 1,
-  "story_manifest": "sol-project/story/story.json",
   "testbed_contract": 1,
-  "monster_profile": "systems-test"
+  "geometry_contract": 1,
+  "monster_profile": "none",
+  "linked_portals": 2
 }
