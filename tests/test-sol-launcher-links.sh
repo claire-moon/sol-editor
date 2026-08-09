@@ -39,11 +39,11 @@ cat > "$tmp/editor" <<'EDITOR'
 #!/usr/bin/env bash
 printf 'editor %s\n' "$*"
 EDITOR
-cat > "$tmp/sol-engine" <<'ENGINE'
+cat > "$tmp/bin/sol-engine" <<'ENGINE'
 #!/usr/bin/env bash
 printf 'engine %s\n' "$*"
 ENGINE
-chmod +x "$tmp/editor" "$tmp/sol-engine"
+chmod +x "$tmp/editor" "$tmp/bin/sol-engine"
 printf 'IWADfixture' > "$tmp/doom.wad"
 
 bundle="$engine_root/build/sol/sol.pk3"
@@ -52,7 +52,7 @@ export SOL_WORKSPACE='$tmp'
 export SOL_EDITOR_ROOT='$root'
 export SOL_EDITOR='$tmp/editor'
 export SOL_ENGINE_ROOT='$engine_root'
-export SOL_ENGINE='$tmp/sol-engine'
+export SOL_ENGINE='$tmp/bin/sol-engine'
 export SOL_BUNDLE='$bundle'
 export DOOM_IWAD='$tmp/doom.wad'
 ENV
