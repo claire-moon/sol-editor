@@ -1,10 +1,20 @@
 {
-  "linedefs": 43,
+  "bounds": [
+    0,
+    512,
+    5632,
+    3584
+  ],
+  "decorations": 108,
+  "linedefs": 95,
   "map": "E1M1",
-  "monsters": 176,
-  "sectors": 14,
-  "sidedefs": 56,
-  "things": 193,
-  "version": "0.1.0",
-  "vertices": 30
+  "monsters": 89,
+  "rooms": 10,
+  "sectors": 36,
+  "sidedefs": 144,
+  "testbed_contract": 1,
+  "things": 225,
+  "version": "0.4.0",
+  "vertices": 58,
+  "weapons": 6
 }
