@@ -34,10 +34,15 @@ JSON
 printf '# Package fixture credits\n' > "$tmp/THIRD_PARTY.md"
 printf 'runtime-component\n' > "$tmp/runtime.pk3"
 printf 'content-component\n' > "$tmp/content.pk3"
-printf '#!/usr/bin/env bash\nexit 0\n' > "$tmp/engine/bin/uzdoom"
+printf '#!/usr/bin/env bash\nexit 0\n' > "$tmp/engine/bin/sol-engine"
 printf '#!/usr/bin/env bash\nexit 0\n' > "$tmp/editor/bin/builder"
-chmod +x "$tmp/engine/bin/uzdoom" "$tmp/editor/bin/builder"
+chmod +x "$tmp/engine/bin/sol-engine" "$tmp/editor/bin/builder"
 printf '# placeholder\n' > "$tmp/engine/tools/sol-runtime-package.sh"
+cat > "$tmp/stale.env" <<ENV
+export SOL_ENGINE='$tmp/engine/bin/not-the-selected-engine'
+export SOL_VEND='$tmp/stale-vend'
+export SOL_BUNDLE='$tmp/stale-output/sol.pk3'
+ENV
 
 python3 "$root/tools/sol-wadpack.py" \
     --manifest "$tmp/manifest.json" --vend "$tmp/vend" \
@@ -45,6 +50,7 @@ python3 "$root/tools/sol-wadpack.py" \
 
 bundle=$(env \
     SOL_WORKSPACE="$tmp" \
+    SOL_ENV_FILE="$tmp/stale.env" \
     SOL_ENGINE_ROOT="$tmp/engine" \
     SOL_VEND_ROOT="$tmp/vend" \
     SOL_WADPACK_MANIFEST="$tmp/manifest.json" \
@@ -53,7 +59,7 @@ bundle=$(env \
     SOL_BUNDLE="$tmp/output/sol.pk3" \
     SOL_RUNTIME_COMPONENT="$tmp/runtime.pk3" \
     SOL_CONTENT_COMPONENT="$tmp/content.pk3" \
-    SOL_ENGINE="$tmp/engine/bin/uzdoom" \
+    SOL_ENGINE="$tmp/engine/bin/sol-engine" \
     SOL_EDITOR="$tmp/editor/bin/builder" \
     bash "$root/tools/sol-bundle.sh")
 
@@ -87,19 +93,20 @@ PY
 rm -rf "$tmp/vend"
 reused=$(env \
     SOL_WORKSPACE="$tmp" \
+    SOL_ENV_FILE="$tmp/stale.env" \
     SOL_ENGINE_ROOT="$tmp/engine" \
     SOL_VEND_ROOT="$tmp/vend" \
     SOL_WADPACK_MANIFEST="$tmp/manifest.json" \
     SOL_VERSION_FILE="$tmp/version.json" \
     SOL_THIRD_PARTY_FILE="$tmp/THIRD_PARTY.md" \
     SOL_BUNDLE="$bundle" \
-    SOL_ENGINE="$tmp/engine/bin/uzdoom" \
+    SOL_ENGINE="$tmp/engine/bin/sol-engine" \
     SOL_EDITOR="$tmp/editor/bin/builder" \
     bash "$root/tools/sol-bundle.sh")
 test "$reused" = "$bundle"
 
-# Materialization remains available for editor authoring, but gameplay can pass
-# only sol.pk3 because UZDoom recursively mounts the root-level *.wad carriers.
+# Materialization remains available for editor authoring, while native gameplay
+# uses the verified sol.pk3 sidecar beside the SOL Engine executable.
 mapfile -t paths < <(python3 "$root/tools/sol-bundle.py" materialize \
     --bundle "$bundle" --directory "$tmp/materialized" --scope all \
     --manifest "$tmp/manifest.json" --version-file "$tmp/version.json")
@@ -109,4 +116,4 @@ test ${#paths[@]} -eq 4
 [[ ${paths[2]} == */runtime.pk3 ]]
 [[ ${paths[3]} == */content.pk3 ]]
 
-printf 'self-contained native SOL package deployment tests passed\n'
+printf 'native SOL sidecar package deployment tests passed\n'

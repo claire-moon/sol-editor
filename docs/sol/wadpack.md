@@ -95,14 +95,21 @@ The `.wad` suffix is a carrier convention, not a file-format conversion. For
 example, the bytes stored under `01-voxel-doom.wad` remain the normalized Voxel
 Doom PK3 bytes.
 
-This convention deliberately uses UZDoom's existing native embedded-resource
-behavior. Its filesystem marks root-level archive members ending in `.wad` as
-embedded, opens each one by content, and recursively adds it as a resource file.
-Because the carrier names begin with fixed-width numbers, UZDoom's normal ZIP
-sorting produces the same 01→20 precedence as loading the original resources
-separately.
+The editor remains version 0.2.0, but this compatibility release writes bundle
+version 0.3.0 into `SOLPACK.json` for native SOL Engine v0.3.0. Wadpack contract
+2, its eighteen inputs, bundle contract 1, and the v0.2.0 content component are
+otherwise unchanged.
 
-Therefore normal gameplay and editor playtests pass exactly one resource file:
+This convention deliberately uses the native embedded-resource behavior
+inherited from UZDoom. The filesystem marks root-level archive members ending
+in `.wad` as embedded, opens each one by content, and recursively adds it as a
+resource file. Because the carrier names begin with fixed-width numbers, normal
+ZIP sorting produces the same 01→20 precedence as loading the original
+resources separately.
+
+Native SOL Engine validates and mounts the adjacent bundle itself, so normal
+gameplay and editor playtests do not pass it as a command-line resource. The
+equivalent compatibility argument for pre-v0.3 UZDoom development binaries is:
 
 ```text
 -file sol.pk3
@@ -110,7 +117,7 @@ Therefore normal gameplay and editor playtests pass exactly one resource file:
 
 No gameplay extraction layer is required. This also avoids destructive
 flattening: identically named `ZSCRIPT`, `MAPINFO`, `DECORATE`, `MENUDEF`, sprite,
-or sound paths remain isolated in their original child archives until UZDoom
+or sound paths remain isolated in their original child archives until the engine
 mounts them in order.
 
 `SOLPACK.json` records each carrier name, original materialized filename,
@@ -124,9 +131,10 @@ Ultimate Doom Builder needs direct resource paths for its authoring data set, so
 keyed by the complete bundle hash. Those files are exposed to UDB in-memory and
 are not written over the user's normal resource configuration.
 
-In-editor playtests do not use the materialized copies. The test wrapper passes
-`sol.pk3` once and lets UDB's temporary map/resource arguments follow it, so the
-temporary map retains final precedence.
+In-editor playtests do not use the materialized copies. With native SOL Engine,
+the test wrapper lets the engine load its sidecar and appends UDB's temporary
+map/resource arguments, so the temporary map retains final precedence. The
+legacy compatibility path passes `sol.pk3` before those temporary arguments.
 
 Once `sol.pk3` exists and verifies against the current contracts, the loose
 `vend/wadpack/runtime` files are no longer a normal gameplay/editor-test runtime
@@ -143,9 +151,11 @@ A successful bundle build copies the same `sol.pk3` into:
 - the directories containing configured `SOL_ENGINE` and `SOL_EDITOR`
   executables when available
 
-The local engine build helper also installs `sol-engine` beside the UZDoom
-binary. That launcher requires/loads the adjacent `sol.pk3` automatically and
-uses `DOOM_IWAD` when supplied; otherwise UZDoom keeps its normal IWAD picker.
+The local engine build helper detects the native `sol-engine` binary and never
+overwrites it with the obsolete shell launcher. The bundle helper copies
+`sol.pk3` beside that executable; AppImage sidecars are copied beside the outer
+AppImage file. A user-owned registered `DOOM.WAD` or `DOOMU.WAD` remains
+required.
 
 The engine-side `tools/sol-package.sh` converges on the same final bundle when
 the sibling editor and complete wadpack are available. During first-run setup it
@@ -169,9 +179,12 @@ modification provenance must remain recorded.
 TargetSpy v3.1.0 declares GPL-3.0-only and © 2026 Alexander Kromm. The full
 source/credit inventory is in `THIRD_PARTY.md` and `sol-project/wadpack.json`.
 
-Attribution does not itself grant redistribution rights. Several components still
-require asset/license review, and HQ PlayStation music/sound effects remain
-local-only proprietary audio. The complete `sol.pk3` may be generated and copied
-into local SOL engine/editor packages for development and testing, but it must
-not be committed to this public repository or attached to a public release until
-the third-party redistribution audit is complete.
+Attribution does not itself grant redistribution rights. Several components
+still require asset/license review. HQ PlayStation music is an accidental
+contract-2 input scheduled for retirement in engine v0.4.0, while PlayStation
+sound effects remain a local placeholder until original SOL sounds replace
+them. Neither is cleared for redistribution while present. The complete
+`sol.pk3` may be generated and copied into local SOL engine/editor packages for
+development and testing, but it must not be committed to this public repository
+or attached to a public release until the third-party redistribution audit is
+complete.

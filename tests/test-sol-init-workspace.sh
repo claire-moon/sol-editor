@@ -9,11 +9,11 @@ engine_root="$workspace/sol-engine"
 vend_root="$workspace/vend"
 mkdir -p "$engine_root/build" "$engine_root/tools"
 
-cat > "$engine_root/build/uzdoom" <<'ENGINE'
+cat > "$engine_root/build/sol-engine" <<'ENGINE'
 #!/usr/bin/env bash
 exit 0
 ENGINE
-chmod +x "$engine_root/build/uzdoom"
+chmod +x "$engine_root/build/sol-engine"
 
 cat > "$tmp/editor" <<'EDITOR'
 #!/usr/bin/env bash
@@ -37,7 +37,6 @@ bash "$root/tools/sol-init-workspace.sh" \
     --workspace "$workspace" \
     --engine-root "$engine_root" \
     --vend "$vend_root" \
-    --engine "$engine_root/build/uzdoom" \
     --editor "$tmp/editor" \
     --primary-iwad "$tmp/DOOM.WAD" \
     --env-file "$env_file" \
@@ -48,7 +47,7 @@ test ! -L "$vend_root/iwads/doom.wad"
 test -s "$vend_root/IWADS.sha256"
 # shellcheck disable=SC1090
 source "$env_file"
-test "$SOL_ENGINE" = "$engine_root/build/uzdoom"
+test "$SOL_ENGINE" = "$engine_root/build/sol-engine"
 test "$SOL_EDITOR" = "$tmp/editor"
 test "$DOOM_IWAD" = "$vend_root/iwads/doom.wad"
 test -f "$SOL_RUNTIME_PKG"
@@ -58,7 +57,7 @@ if bash "$root/tools/sol-init-workspace.sh" \
     --workspace "$workspace" \
     --engine-root "$engine_root" \
     --vend "$tmp/bad-vend" \
-    --engine "$engine_root/build/uzdoom" \
+    --engine "$engine_root/build/sol-engine" \
     --editor "$tmp/editor" \
     --iwad "$tmp/bad.wad" \
     --env-file "$tmp/bad.env" \
@@ -66,5 +65,32 @@ if bash "$root/tools/sol-init-workspace.sh" \
     printf 'invalid IWAD was accepted\n' >&2
     exit 1
 fi
+
+printf 'IWADalternate' > "$tmp/DOOMU.WAD"
+bash "$root/tools/sol-init-workspace.sh" \
+    --workspace "$workspace" \
+    --engine-root "$engine_root" \
+    --vend "$tmp/doomu-vend" \
+    --editor "$tmp/editor" \
+    --iwad "$tmp/DOOMU.WAD" \
+    --env-file "$tmp/doomu.env" \
+    --copy --no-search >/dev/null
+# shellcheck disable=SC1090,SC1091
+source "$tmp/doomu.env"
+test "$DOOM_IWAD" = "$tmp/doomu-vend/iwads/doomu.wad"
+
+printf 'IWADunsupported' > "$tmp/DOOM2.WAD"
+if bash "$root/tools/sol-init-workspace.sh" \
+    --workspace "$workspace" \
+    --engine-root "$engine_root" \
+    --vend "$tmp/doom2-vend" \
+    --editor "$tmp/editor" \
+    --primary-iwad "$tmp/DOOM2.WAD" \
+    --env-file "$tmp/doom2.env" \
+    --copy --no-search >/dev/null 2>&1; then
+    printf 'unsupported Doom II IWAD was selected\n' >&2
+    exit 1
+fi
+test ! -e "$tmp/doom2.env"
 
 printf 'workspace initializer tests passed\n'

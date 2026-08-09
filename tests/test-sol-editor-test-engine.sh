@@ -14,8 +14,11 @@ grep -F 'return Resources;' "$config" >/dev/null
 grep -F 'export SOL_EDITOR_TEST_ENGINE="$root/tools/sol-editor-engine.sh"' "$launcher" >/dev/null
 grep -F 'export SOL_WADPACK_LOAD_ORDER="$resources_file"' "$launcher" >/dev/null
 grep -F -- '--scope wadpack' "$launcher" >/dev/null
-grep -F 'args=(-file "$bundle")' "$wrapper" >/dev/null
-grep -F 'native embedded carriers' "$wrapper" >/dev/null
+grep -F 'args=()' "$wrapper" >/dev/null
+grep -F 'Native SOL Engine mounts' "$wrapper" >/dev/null
+grep -F 'is_native_sol_engine()' "$wrapper" >/dev/null
+grep -F 'sol-engine|sol-engine.exe|*SOL-Engine*.AppImage' "$wrapper" >/dev/null
+grep -F 'args+=(-file "$bundle")' "$wrapper" >/dev/null
 ! grep -F 'mapfile -t engine_files' "$wrapper" >/dev/null
 
 printf 'editor native sol.pk3 resource and test-engine override tests passed\n'

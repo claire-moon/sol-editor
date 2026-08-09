@@ -4,15 +4,26 @@ set -euo pipefail
 root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 env_file=${SOL_ENV_FILE:-"$root/.sol-env"}
 if [[ -f $env_file ]]; then
+    # Treat .sol-env as defaults. Explicit SOL_* values supplied by a caller
+    # (notably the engine build helper and packaging tests) must retain
+    # precedence over a stale interactive workspace configuration.
+    declare -A caller_sol_env=()
+    while IFS= read -r variable_name; do
+        caller_sol_env[$variable_name]=${!variable_name}
+    done < <(compgen -v SOL_)
     set -a
     # shellcheck disable=SC1090
     source "$env_file"
     set +a
+    for variable_name in "${!caller_sol_env[@]}"; do
+        printf -v "$variable_name" '%s' "${caller_sol_env[$variable_name]}"
+        export "${variable_name?}"
+    done
 fi
 
 workspace=${SOL_WORKSPACE:-$(cd "$root/.." && pwd)}
 engine_root=${SOL_ENGINE_ROOT:-"$workspace/sol-engine"}
-vend_root=${SOL_VEND:-${SOL_VEND_ROOT:-"$workspace/vend"}}
+vend_root=${SOL_VEND_ROOT:-${SOL_VEND:-"$workspace/vend"}}
 manifest=${SOL_WADPACK_MANIFEST:-"$root/sol-project/wadpack.json"}
 version_file=${SOL_VERSION_FILE:-"$root/sol/version.json"}
 credits=${SOL_THIRD_PARTY_FILE:-"$root/THIRD_PARTY.md"}
@@ -58,7 +69,7 @@ fi
 
 # Installed packages can explicitly pin a verified bundle without any build-time
 # source tree. With no loose wadpack available, a valid bundle is automatically
-# treated as the complete self-contained runtime.
+# treated as the complete canonical runtime sidecar.
 if ((bundle_valid)) && [[ ${SOL_BUNDLE_REUSE:-0} == 1 ]]; then
     install_bundle_copies
     printf '%s\n' "$bundle"

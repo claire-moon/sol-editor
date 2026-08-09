@@ -58,7 +58,7 @@ while (($#)); do
             shift 2
             ;;
         --copy) mode=copy; shift ;;
-        --link) mode=link; shift ;;
+        --link) mode='link'; shift ;;
         --env-file) require_arg "$@"; env_file=$2; shift 2 ;;
         --no-search) search_enabled=0; shift ;;
         -h|--help) usage; exit 0 ;;
@@ -81,24 +81,62 @@ chmod +x "$engine_root/tools/sol-package.sh"
 
 find_engine() {
     local candidate
+
+    emit_candidate() {
+        local path=$1
+        [[ -n $path && -x $path ]] || return 1
+        if [[ $(basename "$path") == sol-engine ]] &&
+           grep -q 'launcher_dir=.*BASH_SOURCE' "$path" 2>/dev/null; then
+            return 1
+        fi
+        realpath "$path"
+    }
+
+    if emit_candidate "$engine_override"; then
+        return 0
+    fi
+    if emit_candidate "${SOL_ENGINE:-}"; then
+        return 0
+    fi
     for candidate in \
-        "$engine_override" \
-        "${SOL_ENGINE:-}" \
+        "$engine_root/build/sol-local/sol-engine" \
+        "$engine_root/build/sol-v030/sol-engine" \
+        "$engine_root/build/sol-v030/sol-engine.exe" \
+        "$engine_root/build/sol-engine" \
+        "$engine_root/build/Release/sol-engine" \
+        "$engine_root/build/Release/sol-engine.exe"; do
+        if emit_candidate "$candidate"; then
+            return 0
+        fi
+    done
+    while IFS= read -r -d '' candidate; do
+        if emit_candidate "$candidate"; then
+            return 0
+        fi
+    done < <(find "$engine_root/build" -maxdepth 5 -type f \
+        \( -name sol-engine -o -name sol-engine.exe -o \
+           -name '*SOL-Engine*.AppImage' \) \
+        -perm -111 -print0 2>/dev/null || true)
+
+    for candidate in \
         "$engine_root/build/sol-local/uzdoom" \
         "$engine_root/build/uzdoom" \
         "$engine_root/build/Release/uzdoom" \
         "$engine_root/build/Debug/uzdoom" \
         "$engine_root/build/src/uzdoom" \
         "$engine_root/uzdoom"; do
-        if [[ -n $candidate && -x $candidate ]]; then
-            realpath "$candidate"
+        if emit_candidate "$candidate"; then
             return 0
         fi
     done
-    candidate=$(find "$engine_root/build" -maxdepth 5 -type f \
-        \( -name uzdoom -o -name sol-engine -o -name 'UZDoom*.AppImage' \) \
-        -perm -111 -print -quit 2>/dev/null || true)
-    [[ -n $candidate ]] && realpath "$candidate"
+    while IFS= read -r -d '' candidate; do
+        if emit_candidate "$candidate"; then
+            return 0
+        fi
+    done < <(find "$engine_root/build" -maxdepth 5 -type f \
+        \( -name uzdoom -o -name 'UZDoom*.AppImage' \) \
+        -perm -111 -print0 2>/dev/null || true)
+    return 1
 }
 
 find_editor() {
@@ -181,7 +219,7 @@ if ((search_enabled)); then
         while IFS= read -r -d '' path; do
             add_candidate "$path"
         done < <(find "$search_root" -maxdepth 5 -type f \
-            \( -iname doom.wad -o -iname doom1.wad -o -iname doom2.wad \
+            \( -iname doom.wad -o -iname doomu.wad -o -iname doom1.wad -o -iname doom2.wad \
                -o -iname tnt.wad -o -iname plutonia.wad \
                -o -iname freedoom1.wad -o -iname freedoom2.wad \) \
             -print0 2>/dev/null)
@@ -228,22 +266,23 @@ select_primary() {
     local preferred path
     if [[ -n $primary_override ]]; then
         preferred=$(canonical_iwad_name "$primary_override")
+        [[ $preferred == doom.wad || $preferred == doomu.wad ]] || return 1
         path="$iwad_dir/$preferred"
         [[ -f $path ]] || return 1
         printf '%s\n' "$path"
         return
     fi
-    for preferred in doom.wad doom1.wad doom2.wad freedoom1.wad freedoom2.wad tnt.wad plutonia.wad; do
+    for preferred in doom.wad doomu.wad; do
         if [[ -f $iwad_dir/$preferred ]]; then
             printf '%s\n' "$iwad_dir/$preferred"
             return
         fi
     done
-    printf '%s\n' "${installed[0]}"
+    return 1
 }
 
 primary_iwad=$(select_primary) || {
-    printf 'Primary IWAD was not installed.\n' >&2
+    printf 'A Doom IWAD candidate named DOOM.WAD or DOOMU.WAD was not installed; SOL Engine validates its contents at launch.\n' >&2
     exit 1
 }
 

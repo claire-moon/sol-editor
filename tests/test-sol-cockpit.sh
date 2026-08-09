@@ -10,7 +10,7 @@ vend_root="$workspace/vend"
 state_dir="$tmp/state"
 env_file="$tmp/sol.env"
 editor_launcher="$tmp/sol-editor-launcher"
-engine_launcher="$engine_root/build/uzdoom"
+engine_launcher="$engine_root/build/sol-engine"
 fixture="$tmp/DOOM.WAD"
 mkdir -p "$engine_root/tools" "$engine_root/build" "$vend_root"
 
@@ -86,13 +86,19 @@ rm -f "$state_dir/mc-args"
 bash "$root/tools/sol-cockpit.sh" --setup-only --no-build --iwad "$fixture" >/dev/null
 test ! -e "$state_dir/mc-args"
 
-# Replacing the IWAD from the cockpit updates the generated environment.
-printf 'IWADsecond' > "$tmp/DOOM2.WAD"
-"$root/tools/sol-cockpit-action.sh" select-iwad link "$tmp/DOOM2.WAD" >/dev/null
-test -L "$vend_root/iwads/doom2.wad"
+# Replacing the IWAD with the alternate supported name updates the environment.
+printf 'IWADsecond' > "$tmp/DOOMU.WAD"
+"$root/tools/sol-cockpit-action.sh" select-iwad link "$tmp/DOOMU.WAD" >/dev/null
+test -L "$vend_root/iwads/doomu.wad"
 # shellcheck disable=SC1090
 source "$env_file"
-test "$DOOM_IWAD" = "$vend_root/iwads/doom2.wad"
+test "$DOOM_IWAD" = "$vend_root/iwads/doomu.wad"
+
+printf 'IWADunsupported' > "$tmp/DOOM2.WAD"
+if "$root/tools/sol-cockpit-action.sh" select-iwad copy "$tmp/DOOM2.WAD" >/dev/null 2>&1; then
+    printf 'unsupported Doom II IWAD was accepted\n' >&2
+    exit 1
+fi
 
 printf 'PWADbad' > "$tmp/bad.wad"
 if "$root/tools/sol-cockpit-action.sh" select-iwad copy "$tmp/bad.wad" >/dev/null 2>&1; then

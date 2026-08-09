@@ -69,6 +69,7 @@ jobs:
           with open('sol-project/story/story.json', encoding='utf-8') as f:
               story = json.load(f)
           assert version['version'] == '0.2.0'
+          assert version['bundle_version'] == '0.3.0'
           assert version['engine_contract'] == '0.2.0'
           assert version['wadpack_contract'] == 2
           assert version['wadpack_entries'] == 18

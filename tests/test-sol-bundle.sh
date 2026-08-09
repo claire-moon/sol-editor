@@ -25,6 +25,7 @@ cat > "$tmp/version.json" <<'JSON'
 {
   "project": "SOL Editor",
   "version": "0.1.0",
+  "bundle_version": "0.3.0",
   "wadpack_contract": 99,
   "wadpack_entries": 2,
   "bundle_contract": 1,
@@ -91,6 +92,7 @@ python3 - "$tmp/sol.pk3" <<'PY'
 import json, sys, zipfile
 with zipfile.ZipFile(sys.argv[1]) as zf:
     data = json.loads(zf.read('SOLPACK.json'))
+    assert data['version'] == '0.3.0'
     assert data['bundle_contract'] == 1
     assert data['native_embedding'] == 'uzdoom-root-wad-carriers'
     assert data['wadpack_contract'] == 99

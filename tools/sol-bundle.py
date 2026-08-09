@@ -100,7 +100,7 @@ def expected_contract(manifest_path: Path | None, version_path: Path | None) -> 
     manifest = read_json(manifest_path)
     version = read_json(version_path)
     return {
-        'version': version['version'],
+        'version': version.get('bundle_version', version['version']),
         'bundle_contract': version.get('bundle_contract'),
         'bundle_name': version.get('bundle_name'),
         'wadpack_contract': version['wadpack_contract'],
@@ -263,7 +263,7 @@ def build_bundle(args: argparse.Namespace) -> None:
     metadata = {
         'schema': SCHEMA,
         'project': 'SOL',
-        'version': version['version'],
+        'version': version.get('bundle_version', version['version']),
         'bundle_contract': version['bundle_contract'],
         'native_embedding': 'uzdoom-root-wad-carriers',
         'wadpack_contract': version['wadpack_contract'],
