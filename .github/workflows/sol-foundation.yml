@@ -1,4 +1,4 @@
-name: SOL story authoring foundation
+name: SOL editor v0.4 compatibility
 
 on:
   push:
@@ -41,97 +41,100 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - name: Install archive test dependency
-        run: sudo apt-get update && sudo apt-get install -y p7zip-full
+      - uses: actions/checkout@v6
+        with:
+          repository: claire-moon/sol-engine
+          ref: sol/v0.4.0-bundle-authority
+          path: sol-engine
       - name: Validate metadata and scripts
         run: |
           python3 -m json.tool sol/version.json >/dev/null
           python3 -m json.tool sol-project/project.json >/dev/null
           python3 -m json.tool sol-project/wadpack.json >/dev/null
           python3 -m json.tool sol-project/story/story.json >/dev/null
-          bash -n tools/sol-*.sh tests/*.sh
+          bash -n tools/sol-*.sh
           python3 -m py_compile \
             tools/sol-generate-e1m1.py \
             tools/sol-validate-e1m1.py \
             tools/sol-wadpack.py \
-            tools/sol-bundle.py \
             tools/sol-story.py
-      - name: Validate release contract
+      - name: Validate v0.4 compatibility contract
         run: |
           python3 - <<'PY'
           import json
-          with open('sol/version.json', encoding='utf-8') as f:
-              version = json.load(f)
-          with open('sol-project/project.json', encoding='utf-8') as f:
-              project = json.load(f)
-          with open('sol-project/wadpack.json', encoding='utf-8') as f:
-              wadpack = json.load(f)
-          with open('sol-project/story/story.json', encoding='utf-8') as f:
-              story = json.load(f)
-          assert version['version'] == '0.2.0'
-          assert version['bundle_version'] == '0.3.0'
-          assert version['engine_contract'] == '0.2.0'
-          assert version['wadpack_contract'] == 2
+          version = json.load(open('sol/version.json', encoding='utf-8'))
+          project = json.load(open('sol-project/project.json', encoding='utf-8'))
+          pointer = json.load(open('sol-project/wadpack.json', encoding='utf-8'))
+          story = json.load(open('sol-project/story/story.json', encoding='utf-8'))
+          engine = json.load(open('sol-engine/sol/version.json', encoding='utf-8'))
+          manifest = json.load(open('sol-engine/sol/wadpack.json', encoding='utf-8'))
+          assert version['version'] == '0.4.0'
+          assert version['bundle_version'] == '0.4.0'
+          assert version['engine_contract'] == '0.4.0'
+          assert version['authoring_contract'] == '0.2.0'
+          assert version['wadpack_contract'] == 3
           assert version['wadpack_entries'] == 18
-          assert version['bundle_contract'] == 1
-          assert version['bundle_name'] == 'sol.pk3'
-          assert version['story_contract'] == 1
-          assert project['version'] == '0.2.0'
-          assert project['engine_package'] == 'sol-e1m1-v0.2.0.pk3'
-          assert project['wadpack_contract'] == 2
-          assert project['bundle_contract'] == 1
-          assert project['runtime_bundle'] == 'sol.pk3'
-          assert project['story_contract'] == 1
-          assert project['story_manifest'] == 'sol-project/story/story.json'
+          assert version['wadpack_slots'] == 20
+          assert version['bundle_contract'] == 2
+          assert version['runtime_slot'] == 21
+          assert version['content_slot'] == 22
+          assert version['soldefaults_contract'] == 1
+          assert project['version'] == '0.4.0'
+          assert project['engine_package'] == 'sol-e1m1-v0.4.0.pk3'
+          assert project['testbed_contract'] == 1
+          assert project['bundle_contract'] == 2
+          assert project['wadpack_contract'] == 3
+          assert pointer['deprecated'] is True
+          assert pointer['authority'] == 'sol-engine/sol/wadpack.json'
           assert story['contract'] == 1
-          assert story['map'] == project['map']
-          assert wadpack['version'] == '0.1.0'
-          assert len(wadpack['load_order']) == 18
-          tail = wadpack['load_order'][-4:]
-          assert [item['id'] for item in tail] == [
-              'universal-ambience',
-              'cosmoambience-script-edited',
-              'ambient-decorations',
-              'targetspy',
-          ]
-          assert [item['runtime_name'] for item in tail] == [
-              '15-universal-ambience.pk3',
-              '16-cosmoambience-script-edited.pk3',
-              '17-ambient-decorations.pk3',
-              '18-targetspy-v3.1.0.pk3',
-          ]
+          assert engine['version'] == version['engine_contract']
+          assert engine['bundle_contract'] == version['bundle_contract']
+          assert engine['wadpack_contract'] == version['wadpack_contract']
+          assert manifest['slots'][10]['state'] == 'retired'
+          assert manifest['slots'][18]['id'] == 'precise-crosshair'
+          assert manifest['slots'][19]['state'] == 'reserved'
           PY
           python3 tools/sol-story.py sol-project/story/story.json --summary
-          test -s THIRD_PARTY.md
-          grep -F 'local-build runtime artifact' THIRD_PARTY.md
-      - name: Verify setup, cockpit, wadpack, bundle, story, and launchers
+      - name: Verify engine authority delegates
+        env:
+          SOL_ENGINE_ROOT: ${{ github.workspace }}/sol-engine
         run: |
-          for test_script in tests/test-sol-*.sh; do
-            bash "$test_script"
-          done
-      - name: Verify generated map
+          grep -F 'SOL Engine v0.4 bundler not found' tools/sol-bundle.sh
+          grep -F 'SOL Engine v0.4 wadpack tool not found' tools/sol-wadpack.py
+          grep -F 'SOL Engine v0.4 wadpack setup not found' tools/sol-wadpack-setup.sh
+          bash sol-engine/tests/test-sol-bundle-v04.sh
+      - name: Verify generated E1M1 systems testbed
         run: |
           mkdir -p build/sol/generated/e1m1
           python3 tools/sol-generate-e1m1.py --output build/sol/generated/e1m1
           python3 tools/sol-validate-e1m1.py --directory build/sol/generated/e1m1
           cmp build/sol/generated/e1m1/stats.json sol-project/maps/e1m1/stats.json
           cmp build/sol/generated/e1m1/layout.svg sol-project/maps/e1m1/layout.svg
-          ! grep -R -F 'Transition Seam' tools/sol-generate-e1m1.py sol-project/maps/e1m1/layout.svg
+          python3 - <<'PY'
+          import json
+          stats = json.load(open('sol-project/maps/e1m1/stats.json'))
+          assert stats['rooms'] == 10
+          assert stats['sectors'] == 36
+          assert stats['monsters'] == 89
+          assert stats['decorations'] == 108
+          assert stats['weapons'] == 6
+          PY
       - name: Verify pinned DoomTools revision
         run: bash tools/sol-bootstrap-doomtools.sh --verify-only
-      - name: Build story foundation component package
+      - name: Build v0.4 testbed content component
         env:
           SOL_SKIP_DOOMTOOLS: '1'
         run: bash tools/sol-build.sh
-      - name: Inspect component package and branding
+      - name: Inspect content component
         run: |
-          archive=$(find build/sol -maxdepth 1 -name 'sol-e1m1-v0.2.0.pk3' -print -quit)
+          archive=$(find build/sol -maxdepth 1 -name 'sol-e1m1-v0.4.0.pk3' -print -quit)
           test -n "$archive"
           unzip -t "$archive"
           unzip -Z1 "$archive" | grep -Fx SOLINFO
           unzip -Z1 "$archive" | grep -Fx SOLSTORY.json
           unzip -Z1 "$archive" | grep -Fx maps/E1M1.wad
-          unzip -p "$archive" SOLINFO | grep -F '18 locked resources'
+          unzip -p "$archive" SOLINFO | grep -F '36 connected sectors'
+          unzip -p "$archive" SOLINFO | grep -F 'Wadpack contract: 3'
           unzip -p "$archive" SOLSTORY.json | python3 -m json.tool >/dev/null
           test -s branding/sol/sol-icon-master.png
           test -s Source/Core/Resources/UDB2.ico
