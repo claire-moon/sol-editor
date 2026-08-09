@@ -52,8 +52,9 @@ jobs:
           python3 -m json.tool sol-project/project.json >/dev/null
           python3 -m json.tool sol-project/wadpack.json >/dev/null
           python3 -m json.tool sol-project/story/story.json >/dev/null
-          bash -n tools/sol-*.sh
+          bash -n tools/sol-*.sh tests/test-sol-*.sh
           python3 -m py_compile \
+            tools/sol-bundle.py \
             tools/sol-generate-e1m1.py \
             tools/sol-validate-e1m1.py \
             tools/sol-wadpack.py \
@@ -95,14 +96,24 @@ jobs:
           assert manifest['slots'][19]['state'] == 'reserved'
           PY
           python3 tools/sol-story.py sol-project/story/story.json --summary
-      - name: Verify engine authority delegates
+      - name: Verify engine authority
         env:
           SOL_ENGINE_ROOT: ${{ github.workspace }}/sol-engine
         run: |
           grep -F 'SOL Engine v0.4 bundler not found' tools/sol-bundle.sh
+          grep -F 'SOL Engine v0.4 bundle tool not found' tools/sol-bundle.py
           grep -F 'SOL Engine v0.4 wadpack tool not found' tools/sol-wadpack.py
           grep -F 'SOL Engine v0.4 wadpack setup not found' tools/sol-wadpack-setup.sh
+          grep -F '"$engine_root/sol/wadpack.json"' tools/sol-test-main.sh
+          grep -F '"$engine_root/sol/wadpack.json"' tools/sol-editor-engine.sh
+          grep -F '"$engine_root/sol/wadpack.json"' tools/sol-open-editor-main.sh
           bash sol-engine/tests/test-sol-bundle-v04.sh
+      - name: Run SOL editor regression suite
+        run: |
+          for test_script in tests/test-sol-*.sh; do
+            printf '== %s ==\n' "$test_script"
+            bash "$test_script"
+          done
       - name: Verify generated E1M1 systems testbed
         run: |
           mkdir -p build/sol/generated/e1m1
