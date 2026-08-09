@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the generated SOL E1M1 v0.4 systems-test contract."""
+"""Validate the generated SOL! E1M1 TESTMAP v0.4 contract."""
 
 import argparse
 import json
@@ -14,6 +14,9 @@ MONSTER_TYPES = {9, 58, 3001, 3002, 3003, 3004, 3005, 3006}
 REQUIRED_WEAPONS = {2001, 2002, 2003, 2004, 2005, 2006}
 DECORATION_TYPES = {15, 18, 19, 20, 21, 22, 34, 35, 44, 45, 46, 55, 56, 57, 2035}
 BLOCK_KINDS = ("vertex", "linedef", "sidedef", "sector", "thing")
+PORTAL_SPECIAL = 156
+PORTAL_TYPE_LINKED = 3
+PORTAL_IDS = {9001: 9002, 9002: 9001}
 
 
 def fail(message):
@@ -125,6 +128,7 @@ def validate_geometry(blocks, stats):
 
     adjacency = {index: set() for index in range(len(sectors))}
     exit_lines = []
+    portal_lines = []
 
     for linedef in linedefs:
         require_index(linedef.get("v1"), len(vertices), "v1")
@@ -163,8 +167,29 @@ def validate_geometry(blocks, stats):
         if linedef.get("special") == 243:
             exit_lines.append(linedef)
 
+        if linedef.get("special") == PORTAL_SPECIAL:
+            portal_lines.append(linedef)
+
     if len(exit_lines) != 1 or exit_lines[0].get("playeruse") is not True:
         fail("expected one player-use Exit_Normal linedef")
+
+    if len(portal_lines) != 2 or stats.get("linked_portals") != 2:
+        fail("TESTMAP must contain exactly one reciprocal linked-portal pair")
+
+    seen_ids = set()
+    for portal in portal_lines:
+        line_id = portal.get("id")
+        destination_id = portal.get("arg0")
+        if line_id not in PORTAL_IDS or destination_id != PORTAL_IDS[line_id]:
+            fail("TESTMAP linked portal IDs are not reciprocal")
+        if portal.get("arg2") != PORTAL_TYPE_LINKED:
+            fail("TESTMAP portal is not a linked portal")
+        if portal.get("twosided") is not True or "sideback" not in portal:
+            fail("TESTMAP linked portal must have traversable space behind it")
+        seen_ids.add(line_id)
+
+    if seen_ids != set(PORTAL_IDS):
+        fail("TESTMAP linked portal pair is incomplete")
 
     if len(sectors) != stats["sectors"] or len(sectors) < 30:
         fail("systems-test sector budget is too small")
@@ -215,11 +240,8 @@ def validate_things(things, stats):
         for thing_type in types
     )
 
-    if monster_count != stats["monsters"] or not 70 <= monster_count <= 120:
-        fail(
-            "monster budget mismatch: "
-            f"expected systems-test range 70..120, found {monster_count}"
-        )
+    if monster_count != 0 or stats.get("monsters") != 0:
+        fail(f"TESTMAP must be monster-free, found {monster_count}")
 
     if decoration_count != stats["decorations"] or decoration_count < 90:
         fail(
@@ -292,12 +314,14 @@ def main():
 
     if (
         stats.get("map") != "E1M1"
+        or stats.get("title") != "TESTMAP"
         or stats.get("version") != "0.4.0"
         or stats.get("testbed_contract") != 1
+        or stats.get("geometry_contract") != 1
         or stats.get("rooms", 0) < 8
         or stats.get("weapons") != len(REQUIRED_WEAPONS)
     ):
-        fail("generated metadata does not match the v0.4.0 E1M1 testbed contract")
+        fail("generated metadata does not match the v0.4.0 TESTMAP contract")
 
     validate_geometry(blocks, stats)
     validate_things(blocks["thing"], stats)
