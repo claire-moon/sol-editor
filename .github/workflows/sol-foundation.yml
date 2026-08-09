@@ -1,4 +1,4 @@
-name: SOL editor v0.4 compatibility
+name: SOL! editor v0.4 compatibility
 
 on:
   push:
@@ -69,10 +69,13 @@ jobs:
           story = json.load(open('sol-project/story/story.json', encoding='utf-8'))
           engine = json.load(open('sol-engine/sol/version.json', encoding='utf-8'))
           manifest = json.load(open('sol-engine/sol/wadpack.json', encoding='utf-8'))
+          assert version['project'] == 'SOL! Editor'
           assert version['version'] == '0.4.0'
           assert version['bundle_version'] == '0.4.0'
           assert version['engine_contract'] == '0.4.0'
           assert version['authoring_contract'] == '0.2.0'
+          assert version['geometry_contract'] == 1
+          assert version['map_title'] == 'TESTMAP'
           assert version['wadpack_contract'] == 3
           assert version['wadpack_entries'] == 18
           assert version['wadpack_slots'] == 20
@@ -80,15 +83,22 @@ jobs:
           assert version['runtime_slot'] == 21
           assert version['content_slot'] == 22
           assert version['soldefaults_contract'] == 1
+          assert project['name'] == 'SOL!'
           assert project['version'] == '0.4.0'
+          assert project['map_title'] == 'TESTMAP'
           assert project['engine_package'] == 'sol-e1m1-v0.4.0.pk3'
           assert project['testbed_contract'] == 1
+          assert project['geometry_contract'] == 1
+          assert project['monster_profile'] == 'none'
+          assert project['linked_portals'] == 2
           assert project['bundle_contract'] == 2
           assert project['wadpack_contract'] == 3
           assert pointer['deprecated'] is True
           assert pointer['authority'] == 'sol-engine/sol/wadpack.json'
           assert story['contract'] == 1
+          assert engine['project'] == 'SOL! Engine'
           assert engine['version'] == version['engine_contract']
+          assert engine['geometry_contract'] == version['geometry_contract']
           assert engine['bundle_contract'] == version['bundle_contract']
           assert engine['wadpack_contract'] == version['wadpack_contract']
           assert manifest['slots'][10]['state'] == 'retired'
@@ -108,13 +118,13 @@ jobs:
           grep -F '"$engine_root/sol/wadpack.json"' tools/sol-editor-engine.sh
           grep -F '"$engine_root/sol/wadpack.json"' tools/sol-open-editor-main.sh
           bash sol-engine/tests/test-sol-bundle-v04.sh
-      - name: Run SOL editor regression suite
+      - name: Run SOL! editor regression suite
         run: |
           for test_script in tests/test-sol-*.sh; do
             printf '== %s ==\n' "$test_script"
             bash "$test_script"
           done
-      - name: Verify generated E1M1 systems testbed
+      - name: Verify generated TESTMAP systems testbed
         run: |
           mkdir -p build/sol/generated/e1m1
           python3 tools/sol-generate-e1m1.py --output build/sol/generated/e1m1
@@ -124,9 +134,12 @@ jobs:
           python3 - <<'PY'
           import json
           stats = json.load(open('sol-project/maps/e1m1/stats.json'))
+          assert stats['title'] == 'TESTMAP'
+          assert stats['geometry_contract'] == 1
           assert stats['rooms'] == 10
           assert stats['sectors'] == 36
-          assert stats['monsters'] == 89
+          assert stats['monsters'] == 0
+          assert stats['linked_portals'] == 2
           assert stats['decorations'] == 108
           assert stats['weapons'] == 6
           PY
@@ -144,7 +157,9 @@ jobs:
           unzip -Z1 "$archive" | grep -Fx SOLINFO
           unzip -Z1 "$archive" | grep -Fx SOLSTORY.json
           unzip -Z1 "$archive" | grep -Fx maps/E1M1.wad
-          unzip -p "$archive" SOLINFO | grep -F '36 connected sectors'
+          unzip -p "$archive" SOLINFO | grep -F 'Map: E1M1 — TESTMAP'
+          unzip -p "$archive" SOLINFO | grep -F 'Monsters: none'
+          unzip -p "$archive" SOLINFO | grep -F 'geometry contract 1'
           unzip -p "$archive" SOLINFO | grep -F 'Wadpack contract: 3'
           unzip -p "$archive" SOLSTORY.json | python3 -m json.tool >/dev/null
           test -s branding/sol/sol-icon-master.png
