@@ -19,9 +19,9 @@ is complete.
 ## Maintenance period — engine `v0.3.0` through `v0.12.0`
 
 Editor changes during engine-first work are limited to CI fixes, security/
-reliability maintenance, and compatibility updates required by an engine
-contract change. No story text, narrative triggers, production levels, or broad
-new authoring UI is introduced.
+reliability maintenance, compatibility updates required by engine contract
+changes, and deterministic non-production regression fixtures. No story text,
+narrative triggers, production levels, or broad new authoring UI is introduced.
 
 Engine milestones are:
 
@@ -41,10 +41,17 @@ Engine milestones are:
 9. `v0.11.0`: legacy-hardware benchmarks and optimization.
 10. `v0.12.0`: beta stabilization, packaging, and frozen SOL SDK contract 1.
 
-During `v0.4.0`, authority for `sol-project/wadpack.json`, third-party import and
-locking, `sol.pk3` construction, and bundle provenance moves to `sol-engine`.
-The editor consumes the resulting bundle/contracts and continues placing its
-temporary playtest map after `sol.pk3` so test content retains precedence.
+During `v0.4.0`, authority for the wadpack manifest, third-party import and
+locking, `sol.pk3` construction, slot allocation, defaults, and bundle
+provenance moves to `sol-engine`. The editor consumes the resulting contracts
+and continues placing its temporary playtest map after `sol.pk3` so test content
+retains precedence.
+
+The generated E1M1 fixture is expanded in v0.4 into a deterministic systems
+testbed with multiple connected rooms, stock placeholder materials, varied
+lighting, all major Doom weapons, varied monster arrangements, and dense stock
+objects. It exists to exercise ReLite, Universal Ambience, renderer/resource
+loading, and authoring integration; it is not production level design.
 
 ## `v0.13.0`: palette and voxel toolchain
 
@@ -116,8 +123,9 @@ played, and benchmarked entirely through the editor.
 ## Preserved contracts and release boundaries
 
 - Final gameplay runtime remains one physical `sol.pk3`.
-- The original resource positions remain stable. Wadpack contract 3 retires
-  slot 11, preserves 12–18, reserves 19–20, and assigns runtime/content to 21–22.
+- Wadpack contract 3 retires slot 11, preserves 12–18, assigns
+  PreciseCrosshair v1.5.0 to slot 19, reserves slot 20, and assigns
+  runtime/content to 21–22.
 - Story IDs remain contract 1 in the 1–65535 range and are not repurposed.
 - Doom statistics may remain internal, but the future SOL player presentation is
   stat-free and uses Chapters rather than Episodes.
