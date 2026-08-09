@@ -30,14 +30,14 @@ if ((needs_setup)); then
     fi
 fi
 
-manifest=${SOL_WADPACK_MANIFEST:-"$root/sol-project/wadpack.json"}
-version_file=${SOL_VERSION_FILE:-"$root/sol/version.json"}
-bundle=${SOL_BUNDLE:-"$root/build/sol/sol.pk3"}
+workspace=${SOL_WORKSPACE:-$(cd "$root/.." && pwd)}
+engine_root=${SOL_ENGINE_ROOT:-"$workspace/sol-engine"}
+manifest=${SOL_WADPACK_MANIFEST:-"$engine_root/sol/wadpack.json"}
+version_file=${SOL_VERSION_FILE:-"$engine_root/sol/version.json"}
+bundle=${SOL_BUNDLE:-"$engine_root/build/sol/sol.pk3"}
 bundle_tool=(python3 "$root/tools/sol-bundle.py")
 
-# Development checkouts refresh SOL-owned component hashes before play. An
-# installed package with no loose vend tree reuses its verified sol.pk3.
-bundle=$(SOL_BUNDLE="$bundle" bash "$root/tools/sol-bundle.sh")
+bundle=$(SOL_ENGINE_ROOT="$engine_root" SOL_BUNDLE="$bundle" bash "$root/tools/sol-bundle.sh")
 "${bundle_tool[@]}" verify \
     --bundle "$bundle" --manifest "$manifest" --version-file "$version_file" \
     >/dev/null
@@ -45,8 +45,6 @@ bundle=$(SOL_BUNDLE="$bundle" bash "$root/tools/sol-bundle.sh")
 map_name=${1:-E1M1}
 if [[ $# -gt 0 ]]; then shift; fi
 
-# Native SOL Engine validates and mounts the adjacent bundle itself. The
-# explicit map remains a development warp and therefore marks the run modified.
 args=(-iwad "$(realpath "$DOOM_IWAD")")
 is_native_sol_engine() {
     local name
