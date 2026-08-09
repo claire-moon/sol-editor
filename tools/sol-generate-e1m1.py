@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate SOL's deterministic E1M1 systems-test PWAD without IWAD data."""
+"""Generate SOL!'s deterministic E1M1 TESTMAP PWAD without IWAD data."""
 
 import argparse
 import hashlib
@@ -63,12 +63,18 @@ THEMES = {
     "Exit": ("STARTAN3", "FLOOR4_8", "CEIL3_5", 160, 0, 144),
 }
 
-MONSTER_TYPES = (3004, 9, 3001, 3002, 58, 3005, 3006, 3003)
 WEAPON_TYPES = (2001, 2002, 2003, 2004, 2005, 2006)
 DECORATION_TYPES = (2035, 34, 35, 44, 45, 46, 55, 56, 57, 15, 18, 19, 20, 21, 22)
 
 EXIT_CELL = (10, 4)
 EXIT_EDGE = "east"
+
+PORTAL_TYPE_LINKED = 3
+PORTAL_SPECIAL = 156
+PORTAL_LINKS = {
+    frozenset(((1, 3), (2, 3))): (9001, 9002, False),
+    frozenset(((8, 3), (9, 3))): (9002, 9001, True),
+}
 
 
 def block(kind, values):
@@ -162,13 +168,35 @@ def make_geometry():
             first, second = owners
             front = side(first["sector"], first["wall"], first["wall"], "-")
             back = side(second["sector"], second["wall"], second["wall"], "-")
-            linedefs.append({
-                "v1": vertex(first["p1"]),
-                "v2": vertex(first["p2"]),
+            v1 = vertex(first["p1"])
+            v2 = vertex(first["p2"])
+            cell_pair = frozenset((first["cell"], second["cell"]))
+            portal = PORTAL_LINKS.get(cell_pair)
+
+            linedef = {
+                "v1": v1,
+                "v2": v2,
                 "sidefront": front,
                 "sideback": back,
                 "twosided": True,
-            })
+            }
+
+            if portal is not None:
+                line_id, destination_id, reverse = portal
+                if reverse:
+                    linedef["v1"], linedef["v2"] = linedef["v2"], linedef["v1"]
+                    linedef["sidefront"], linedef["sideback"] = linedef["sideback"], linedef["sidefront"]
+                linedef.update({
+                    "id": line_id,
+                    "special": PORTAL_SPECIAL,
+                    "arg0": destination_id,
+                    "arg1": 0,
+                    "arg2": PORTAL_TYPE_LINKED,
+                    "arg3": 0,
+                    "arg4": 0,
+                })
+
+            linedefs.append(linedef)
             continue
 
         if len(owners) != 1:
@@ -232,31 +260,6 @@ def make_things(ordered_cells):
                 (index * 29) % 360,
             )
 
-    monster_count = 0
-    for index, (gx, gy) in enumerate(ordered_cells):
-        theme = CELLS[(gx, gy)]
-        if theme == "Arrival":
-            count = 1
-        elif theme in {"Service", "Laboratory", "Control", "Exit"}:
-            count = 2
-        elif theme in {"Atrium", "Reactor", "Courtyard"}:
-            count = 3
-        else:
-            count = 2
-
-        positions = ((160, 160), (352, 352), (352, 160))
-        for slot in range(count):
-            dx, dy = positions[slot]
-            monster_type = MONSTER_TYPES[(index + slot * 3) % len(MONSTER_TYPES)]
-            add_thing(
-                things,
-                gx * CELL + dx,
-                gy * CELL + dy,
-                monster_type,
-                (index * 37 + slot * 120) % 360,
-            )
-            monster_count += 1
-
     decoration_count = 0
     for index, (gx, gy) in enumerate(ordered_cells):
         decoration_types = (
@@ -277,12 +280,12 @@ def make_things(ordered_cells):
             )
             decoration_count += 1
 
-    return things, monster_count, decoration_count
+    return things, decoration_count
 
 
 def make_textmap():
     ordered_cells, sectors, vertices, sidedefs, linedefs = make_geometry()
-    things, monster_count, decoration_count = make_things(ordered_cells)
+    things, decoration_count = make_things(ordered_cells)
     out = ['namespace = "ZDoom";\n']
 
     for x, y in vertices:
@@ -325,18 +328,21 @@ def make_textmap():
 
     stats = {
         "map": "E1M1",
+        "title": "TESTMAP",
         "version": "0.4.0",
         "testbed_contract": 1,
+        "geometry_contract": 1,
         "bounds": [min_x, min_y, max_x, max_y],
         "vertices": len(vertices),
         "linedefs": len(linedefs),
         "sidedefs": len(sidedefs),
         "sectors": len(sectors),
         "things": len(things),
-        "monsters": monster_count,
+        "monsters": 0,
         "decorations": decoration_count,
         "weapons": len(WEAPON_TYPES),
         "rooms": len(set(CELLS.values())),
+        "linked_portals": len(PORTAL_LINKS),
     }
 
     return "\n".join(out).encode(), stats
