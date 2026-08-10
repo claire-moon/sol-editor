@@ -44,7 +44,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           repository: claire-moon/sol-engine
-          ref: sol/v0.4.0-bundle-authority
+          ref: sol/v0.4.0-playtest-regressions
           path: sol-engine
       - name: Validate metadata and scripts
         run: |
@@ -90,7 +90,9 @@ jobs:
           assert project['testbed_contract'] == 1
           assert project['geometry_contract'] == 1
           assert project['monster_profile'] == 'none'
-          assert project['linked_portals'] == 2
+          assert project['linked_portals'] == 4
+          assert project['linked_portal_pairs'] == 2
+          assert project['door_open_lines'] == 1
           assert project['bundle_contract'] == 2
           assert project['wadpack_contract'] == 3
           assert pointer['deprecated'] is True
@@ -131,16 +133,23 @@ jobs:
           python3 tools/sol-validate-e1m1.py --directory build/sol/generated/e1m1
           cmp build/sol/generated/e1m1/stats.json sol-project/maps/e1m1/stats.json
           cmp build/sol/generated/e1m1/layout.svg sol-project/maps/e1m1/layout.svg
+          grep -F 'id = 9001;' build/sol/generated/e1m1/TEXTMAP.txt
+          grep -F 'id = 9002;' build/sol/generated/e1m1/TEXTMAP.txt
+          grep -F 'id = 9011;' build/sol/generated/e1m1/TEXTMAP.txt
+          grep -F 'id = 9012;' build/sol/generated/e1m1/TEXTMAP.txt
+          grep -F 'id = 9100;' build/sol/generated/e1m1/TEXTMAP.txt
           python3 - <<'PY'
           import json
           stats = json.load(open('sol-project/maps/e1m1/stats.json'))
           assert stats['title'] == 'TESTMAP'
           assert stats['geometry_contract'] == 1
-          assert stats['rooms'] == 10
-          assert stats['sectors'] == 36
+          assert stats['rooms'] == 15
+          assert stats['sectors'] == 47
           assert stats['monsters'] == 0
-          assert stats['linked_portals'] == 2
-          assert stats['decorations'] == 108
+          assert stats['linked_portals'] == 4
+          assert stats['linked_portal_pairs'] == 2
+          assert stats['door_open_lines'] == 1
+          assert stats['decorations'] == 126
           assert stats['weapons'] == 6
           PY
       - name: Verify pinned DoomTools revision
