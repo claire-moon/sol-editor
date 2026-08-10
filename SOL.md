@@ -77,9 +77,9 @@ asset has documented redistribution permission.
 ## TESTMAP systems testbed
 
 `tools/sol-generate-e1m1.py` is the deterministic source of the test map. E1M1
-is presented to the player as `TESTMAP`. The v0.4 fixture contains ten functional
-room themes represented by 36 connected sectors across a two-dimensional layout
-rather than a linear strip.
+is presented to the player as `TESTMAP`. The current v0.4 fixture contains 15
+functional room themes represented by 47 connected sectors across a
+two-dimensional layout rather than a linear strip.
 
 Coverage includes:
 
@@ -87,18 +87,28 @@ Coverage includes:
   materials;
 - broad light-level and floor/ceiling-height variation;
 - no monsters;
-- one reciprocal linked line-portal pair under SOL! geometry contract 1, joining
-  physically remote thresholds to demonstrate an impossible adjacency;
+- an authored impossible-room demonstration using reciprocal linked portal IDs
+  9001/9002: the player enters the local chamber normally from the side, can
+  back into the portal, and exits the remote chamber through geometry arranged
+  so the original entrance is not exposed by looking back;
+- a separate decorated Portal Lab using reciprocal linked portal IDs 9011/9012,
+  intentionally preserving direct through-portal visibility behind an initially
+  closed player-use `Door_Open` gate;
 - shotgun, chaingun, chainsaw, rocket launcher, plasma rifle, and BFG;
 - ammunition, health, armor, powerups, and multiplayer starts;
-- 108 stock barrels, torches/candelabras, corpses, and other decorations to
+- 126 stock barrels, torches/candelabras, corpses, and other decorations to
   exercise ReLite and Universal Ambience behavior;
 - a normal player-use exit and connected-sector validation.
 
 Tracked `stats.json` and `layout.svg` must match deterministic generator output.
 `tools/sol-validate-e1m1.py` rejects monsters, malformed or non-reciprocal linked
-portals, disconnected geometry, reduced material or lighting coverage, missing
-weapons/starts, inadequate prop coverage, invalid bounds, and contract drift.
+portals, a missing or malformed Portal Lab door, disconnected geometry, reduced
+material or lighting coverage, missing weapons/starts, inadequate prop coverage,
+invalid bounds, and contract drift.
+
+Portal concealment is an authoring responsibility. SOL! Engine retains ordinary
+linked-portal rendering and traversal semantics; TESTMAP does not depend on a
+custom player class or view-direction traversal exception.
 
 This fixture is test infrastructure, not a resumed production level.
 
