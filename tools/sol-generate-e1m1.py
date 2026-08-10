@@ -48,6 +48,19 @@ CELLS = {
     (9, 5): "Exit",
     (10, 5): "Exit",
     (10, 4): "Exit",
+    (11, 5): "Service",
+    (12, 5): "Laboratory",
+    (13, 5): "Laboratory",
+    (12, 6): "Laboratory",
+    (13, 6): "Laboratory",
+    (3, 6): "PortalDoor",
+    (3, 7): "PortalLab",
+    (2, 7): "PortalLab",
+    (1, 7): "PortalLab",
+    (2, 8): "PortalLab",
+    (3, 8): "PortalLab",
+    (4, 8): "PortalLab",
+    (5, 8): "PortalLab",
 }
 
 THEMES = {
@@ -61,6 +74,8 @@ THEMES = {
     "Reactor": ("METAL1", "NUKAGE1", "CEIL5_1", 112, -8, 192),
     "Courtyard": ("STONE2", "FLAT14", "F_SKY1", 224, 0, 256),
     "Exit": ("STARTAN3", "FLOOR4_8", "CEIL3_5", 160, 0, 144),
+    "PortalDoor": ("BIGDOOR2", "FLOOR4_6", "CEIL5_1", 144, 0, 0),
+    "PortalLab": ("TEKWALL1", "FLOOR4_6", "CEIL5_1", 192, 0, 160),
 }
 
 WEAPON_TYPES = (2001, 2002, 2003, 2004, 2005, 2006)
@@ -72,9 +87,16 @@ EXIT_EDGE = "east"
 PORTAL_TYPE_LINKED = 3
 PORTAL_SPECIAL = 156
 PORTAL_LINKS = {
-    frozenset(((1, 3), (2, 3))): (9001, 9002, False),
-    frozenset(((8, 3), (9, 3))): (9002, 9001, True),
+    frozenset(((5, 6), (6, 6))): (9001, 9002, False),
+    frozenset(((12, 6), (13, 6))): (9002, 9001, True),
+    frozenset(((1, 7), (2, 7))): (9011, 9012, False),
+    frozenset(((4, 8), (5, 8))): (9012, 9011, True),
 }
+
+DOOR_SPECIAL_OPEN = 11
+PORTAL_LAB_DOOR_CELL = (3, 6)
+PORTAL_LAB_DOOR_ACCESS = frozenset(((3, 5), PORTAL_LAB_DOOR_CELL))
+PORTAL_LAB_DOOR_TAG = 9100
 
 
 def block(kind, values):
@@ -116,7 +138,7 @@ def make_geometry():
     for cell in ordered_cells:
         theme_name = CELLS[cell]
         wall, floor, ceiling, light, floor_height, ceiling_height = THEMES[theme_name]
-        sectors.append({
+        sector = {
             "cell": cell,
             "name": theme_name,
             "wall": wall,
@@ -125,7 +147,10 @@ def make_geometry():
             "light": light,
             "floor_height": floor_height,
             "ceiling_height": ceiling_height,
-        })
+        }
+        if cell == PORTAL_LAB_DOOR_CELL:
+            sector["id"] = PORTAL_LAB_DOOR_TAG
+        sectors.append(sector)
 
         gx, gy = cell
         for edge_name, p1, p2 in cell_edges(gx, gy):
@@ -166,11 +191,14 @@ def make_geometry():
 
         if len(owners) == 2:
             first, second = owners
-            front = side(first["sector"], first["wall"], first["wall"], "-")
-            back = side(second["sector"], second["wall"], second["wall"], "-")
+            cell_pair = frozenset((first["cell"], second["cell"]))
+            is_door_access = cell_pair == PORTAL_LAB_DOOR_ACCESS
+            first_top = "BIGDOOR2" if is_door_access else first["wall"]
+            second_top = "BIGDOOR2" if is_door_access else second["wall"]
+            front = side(first["sector"], first_top, first["wall"], "-")
+            back = side(second["sector"], second_top, second["wall"], "-")
             v1 = vertex(first["p1"])
             v2 = vertex(first["p2"])
-            cell_pair = frozenset((first["cell"], second["cell"]))
             portal = PORTAL_LINKS.get(cell_pair)
 
             linedef = {
@@ -194,6 +222,17 @@ def make_geometry():
                     "arg2": PORTAL_TYPE_LINKED,
                     "arg3": 0,
                     "arg4": 0,
+                })
+
+            if is_door_access:
+                linedef.update({
+                    "special": DOOR_SPECIAL_OPEN,
+                    "arg0": PORTAL_LAB_DOOR_TAG,
+                    "arg1": 16,
+                    "arg2": 0,
+                    "arg3": 0,
+                    "arg4": 0,
+                    "playeruse": True,
                 })
 
             linedefs.append(linedef)
@@ -251,6 +290,8 @@ def make_things(ordered_cells):
 
     supply_types = (2007, 2008, 2010, 2047, 2011, 2012, 2014, 2015, 2018, 2019, 2023, 2013)
     for index, (gx, gy) in enumerate(ordered_cells):
+        if CELLS[(gx, gy)] == "PortalDoor":
+            continue
         if index % 2 == 0:
             add_thing(
                 things,
@@ -262,6 +303,8 @@ def make_things(ordered_cells):
 
     decoration_count = 0
     for index, (gx, gy) in enumerate(ordered_cells):
+        if CELLS[(gx, gy)] == "PortalDoor":
+            continue
         decoration_types = (
             2035,
             DECORATION_TYPES[(index + 3) % len(DECORATION_TYPES)],
@@ -300,13 +343,16 @@ def make_textmap():
     for index, sector in enumerate(sectors):
         gx, gy = sector["cell"]
         out.append(f'// sector {index}: {sector["name"]} cell {gx},{gy}\n')
-        out.append(block("sector", [
+        sector_values = [
             ("heightfloor", sector["floor_height"]),
             ("heightceiling", sector["ceiling_height"]),
             ("texturefloor", sector["floor"]),
             ("textureceiling", sector["ceiling"]),
             ("lightlevel", sector["light"]),
-        ]))
+        ]
+        if "id" in sector:
+            sector_values.append(("id", sector["id"]))
+        out.append(block("sector", sector_values))
 
     for thing in things:
         values = list(thing.items())
@@ -343,6 +389,10 @@ def make_textmap():
         "weapons": len(WEAPON_TYPES),
         "rooms": len(set(CELLS.values())),
         "linked_portals": len(PORTAL_LINKS),
+        "portal_pairs": 2,
+        "illusion_portal_ids": [9001, 9002],
+        "portal_lab_ids": [9011, 9012],
+        "portal_lab_doors": 1,
     }
 
     return "\n".join(out).encode(), stats
