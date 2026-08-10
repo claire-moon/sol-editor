@@ -48,6 +48,11 @@ CELLS = {
     (9, 5): "Exit",
     (10, 5): "Exit",
     (10, 4): "Exit",
+    (3, 6): "Portal Door",
+    (3, 7): "Portal Lab",
+    (4, 7): "Portal Lab",
+    (0, 8): "Portal Lab",
+    (1, 8): "Portal Lab",
 }
 
 THEMES = {
@@ -61,6 +66,8 @@ THEMES = {
     "Reactor": ("METAL1", "NUKAGE1", "CEIL5_1", 112, -8, 192),
     "Courtyard": ("STONE2", "FLAT14", "F_SKY1", 224, 0, 256),
     "Exit": ("STARTAN3", "FLOOR4_8", "CEIL3_5", 160, 0, 144),
+    "Portal Door": ("DOOR3", "FLAT14", "CEIL5_1", 144, 0, 0),
+    "Portal Lab": ("TEKWALL4", "FLAT14", "CEIL5_1", 192, 0, 160),
 }
 
 WEAPON_TYPES = (2001, 2002, 2003, 2004, 2005, 2006)
@@ -71,9 +78,15 @@ EXIT_EDGE = "east"
 
 PORTAL_TYPE_LINKED = 3
 PORTAL_SPECIAL = 156
+DOOR_SPECIAL = 11
+PORTAL_DOOR_CELL = (3, 6)
+PORTAL_DOOR_ID = 9100
+PORTAL_DOOR_TRIGGER = frozenset(((3, 5), PORTAL_DOOR_CELL))
 PORTAL_LINKS = {
     frozenset(((1, 3), (2, 3))): (9001, 9002, False),
     frozenset(((8, 3), (9, 3))): (9002, 9001, True),
+    frozenset(((3, 7), (4, 7))): (9011, 9012, False),
+    frozenset(((0, 8), (1, 8))): (9012, 9011, True),
 }
 
 
@@ -125,6 +138,7 @@ def make_geometry():
             "light": light,
             "floor_height": floor_height,
             "ceiling_height": ceiling_height,
+            "id": PORTAL_DOOR_ID if cell == PORTAL_DOOR_CELL else None,
         })
 
         gx, gy = cell
@@ -172,6 +186,7 @@ def make_geometry():
             v2 = vertex(first["p2"])
             cell_pair = frozenset((first["cell"], second["cell"]))
             portal = PORTAL_LINKS.get(cell_pair)
+            is_portal_door_trigger = cell_pair == PORTAL_DOOR_TRIGGER
 
             linedef = {
                 "v1": v1,
@@ -180,6 +195,15 @@ def make_geometry():
                 "sideback": back,
                 "twosided": True,
             }
+
+            if is_portal_door_trigger:
+                linedef.update({
+                    "special": DOOR_SPECIAL,
+                    "arg0": PORTAL_DOOR_ID,
+                    "arg1": 16,
+                    "arg2": 0,
+                    "playeruse": True,
+                })
 
             if portal is not None:
                 line_id, destination_id, reverse = portal
@@ -300,13 +324,16 @@ def make_textmap():
     for index, sector in enumerate(sectors):
         gx, gy = sector["cell"]
         out.append(f'// sector {index}: {sector["name"]} cell {gx},{gy}\n')
-        out.append(block("sector", [
+        values = [
             ("heightfloor", sector["floor_height"]),
             ("heightceiling", sector["ceiling_height"]),
             ("texturefloor", sector["floor"]),
             ("textureceiling", sector["ceiling"]),
             ("lightlevel", sector["light"]),
-        ]))
+        ]
+        if sector["id"] is not None:
+            values.append(("id", sector["id"]))
+        out.append(block("sector", values))
 
     for thing in things:
         values = list(thing.items())
