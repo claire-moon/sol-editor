@@ -2,22 +2,32 @@
   "bounds": [
     0,
     512,
-    5632,
-    3584
+    7168,
+    4608
   ],
-  "decorations": 108,
+  "decorations": 144,
   "geometry_contract": 1,
-  "linedefs": 95,
-  "linked_portals": 2,
+  "illusion_portal_ids": [
+    9001,
+    9002
+  ],
+  "linedefs": 132,
+  "linked_portals": 4,
   "map": "E1M1",
   "monsters": 0,
-  "rooms": 10,
-  "sectors": 36,
-  "sidedefs": 144,
+  "portal_lab_doors": 1,
+  "portal_lab_ids": [
+    9011,
+    9012
+  ],
+  "portal_pairs": 2,
+  "rooms": 12,
+  "sectors": 49,
+  "sidedefs": 196,
   "testbed_contract": 1,
-  "things": 136,
+  "things": 179,
   "title": "TESTMAP",
   "version": "0.4.0",
-  "vertices": 58,
+  "vertices": 82,
   "weapons": 6
 }
