@@ -1,10 +1,23 @@
 {
-  "linedefs": 43,
+  "bounds": [
+    0,
+    512,
+    5632,
+    3584
+  ],
+  "decorations": 108,
+  "geometry_contract": 1,
+  "linedefs": 95,
+  "linked_portals": 2,
   "map": "E1M1",
-  "monsters": 176,
-  "sectors": 14,
-  "sidedefs": 56,
-  "things": 193,
-  "version": "0.1.0",
-  "vertices": 30
+  "monsters": 0,
+  "rooms": 10,
+  "sectors": 36,
+  "sidedefs": 144,
+  "testbed_contract": 1,
+  "things": 136,
+  "title": "TESTMAP",
+  "version": "0.4.0",
+  "vertices": 58,
+  "weapons": 6
 }

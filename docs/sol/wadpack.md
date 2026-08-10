@@ -1,190 +1,94 @@
-# SOL locked wadpack
+# SOL wadpack consumption
 
-SOL v0.1.0 uses a fixed resource stack to establish the intended visual, audio,
-movement, gore, lighting, ambience, targeting, and HUD baseline. The order is
-part of the game contract and must not be rearranged during normal playtests.
+Beginning with SOL Engine v0.4.0, `sol-editor` no longer owns the canonical
+wadpack manifest, importer/locker, final `sol.pk3` builder, or provenance table.
+Those live in the sibling `sol-engine` repository.
 
-## Load order
+## Authoritative v0.4 files
 
-1. Voxel Doom 2.4
-2. Universal Weapon Sway
-3. Troo Cullers 2.5
-4. Tilt++
-5. Relighting 0.7.3b
-6. Angled Doom Lite 1.2.1
-7. NashGore NEXT
-8. NashGore official voxels
-9. Final Custom Doom 1.0.0 beta
-10. Vanilla Essence 4.3
-11. HQ PSX music
-12. PlayStation sound effects
-13. Flashlight++ 9.1
-14. WW Alpha HUD
-15. Universal Ambience
-16. CosmoAmbience Script edited
-17. Ambient decorations
-18. TargetSpy v3.1.0
+```text
+sol-engine/sol/wadpack.json
+sol-engine/tools/sol-wadpack.py
+sol-engine/tools/sol-wadpack-setup.sh
+sol-engine/tools/sol-bundle.py
+sol-engine/tools/sol-bundle.sh
+sol-engine/THIRD_PARTY.md
+```
 
-Entries 15–18 are appended after the original fourteen so the earlier resource
-precedence remains unchanged. Wadpack contract 2 requires all eighteen entries.
+The editor retains compatibility entry points with the same familiar names, but
+they delegate to those engine-owned tools. `sol-project/wadpack.json` is now a
+deprecation pointer and must not be edited as a resource contract.
 
-## Build-time import
+## Wadpack contract 3
+
+Twenty logical wadpack slots are defined:
+
+```text
+01–10  active
+11     retired — HQ PSX music
+12–18  active
+19     active — PreciseCrosshair v1.5.0
+20     reserved
+```
+
+There are eighteen active resources. The retired/reserved slots remain visible
+in metadata but are not materialized or mounted.
+
+SOL-owned runtime/content occupy slots 21 and 22 under bundle contract 2.
+
+## Local setup
+
+From the editor checkout:
 
 ```bash
 bash tools/sol-wadpack-setup.sh
 ```
 
-The setup program searches `vend`, the SOL workspace, Downloads, Desktop, and
-Documents. When files remain missing, it opens an isolated Midnight Commander
-selector. Highlight the folder containing the files, press `F2`, choose `W`,
-review the import, and press `F10`.
+The compatibility wrapper finds the sibling engine and invokes the canonical
+engine setup. Locked local files remain under the shared workspace `vend/wadpack`
+tree. This includes user-supplied third-party files such as
+`PreciseCrosshair-v1.5.0.pk3`; the binary is not committed to either SOL
+repository.
 
-The importer writes:
+## Final bundle
 
-- `vend/wadpack/source/`: preserved local source archives.
-- `vend/wadpack/runtime/`: normalized, numbered runtime files.
-- `vend/wadpack/lock.json`: source and runtime hashes.
-- `vend/wadpack/load-order.txt`: ordered build-input paths.
-
-Wrapper archives are normalized before bundling:
-
-- Universal Weapon Sway has its single repository root removed.
-- `nashgore_next.zip` contributes the nested `nashgore.pk3`.
-- `PSSFX.zip` contributes `PSSFX.wad`.
-- Flashlight++ contributes its nested PK3 through 7-Zip.
-- HQ PSX music contributes its nested WAD.
-
-The four contract-2 additions are direct PK3 copies with exact source hashes:
-
-- `1 Universal Ambience.pk3`: `b739009ac26576f028bb833985b44b375213563bdc8e8c8bd3f2ee182fdd0e35`
-- `2 CosmoAmbience Script edited.pk3`: `b1dc50a069433e2fa5feb6aa63d45ffb9e4c2a8989389fc026e0b44b01e01d36`
-- `3 Ambient decorations.pk3`: `96b652aea1883c38e22797578280804f8a4557c7aa5c48cacdba45351413eb8b`
-- `TargetSpy-v3.1.0.pk3`: `6cdafe4af382f76071150a9c4f39b61597f22cf7098a02837cc1b6a81808e128`
-
-## Single runtime package
-
-After all eighteen resources are present, build the final runtime:
+From the editor checkout:
 
 ```bash
 bash tools/sol-package.sh
 ```
 
-The result is:
+This delegates final construction to SOL Engine. The editor first remains
+available to produce its current content component; the engine supplies the
+runtime component, locked resource inputs, attribution, and final contract.
+
+`SOLPACK.json` schema 2 separates all logical slots from physical mounted
+components. A normal v0.4 physical bundle contains carriers for slots 1–10,
+12–19, 21, and 22. No carrier exists for retired slot 11 or reserved slot 20.
+
+The result remains:
 
 ```text
 build/sol/sol.pk3
 ```
 
-Bundle contract 1 stores every component byte-for-byte under a numbered
-root-level `.wad` carrier:
+Copies placed beside local engine/editor binaries are byte-identical.
 
-```text
-sol.pk3
-├── SOLPACK.json
-├── THIRD_PARTY.md
-├── 01-voxel-doom.wad
-├── 02-universal-weapon-sway.wad
-├── 03-troo-cullers.wad
-├── ...
-├── 18-targetspy.wad
-├── 19-sol-runtime.wad
-└── 20-sol-content.wad
-```
+## Authoring materialization
 
-The `.wad` suffix is a carrier convention, not a file-format conversion. For
-example, the bytes stored under `01-voxel-doom.wad` remain the normalized Voxel
-Doom PK3 bytes.
+Ultimate Doom Builder still requires direct resource paths. The engine-owned
+bundle tool may materialize only active wadpack components into a cache keyed by
+the complete bundle hash. Retired/reserved positions are skipped.
 
-The editor remains version 0.2.0, but this compatibility release writes bundle
-version 0.3.0 into `SOLPACK.json` for native SOL Engine v0.3.0. Wadpack contract
-2, its eighteen inputs, bundle contract 1, and the v0.2.0 content component are
-otherwise unchanged.
+Native editor playtests let `sol-engine` validate/mount its adjacent `sol.pk3`
+and append the temporary UDB map afterward so the map under edit retains final
+precedence.
 
-This convention deliberately uses the native embedded-resource behavior
-inherited from UZDoom. The filesystem marks root-level archive members ending
-in `.wad` as embedded, opens each one by content, and recursively adds it as a
-resource file. Because the carrier names begin with fixed-width numbers, normal
-ZIP sorting produces the same 01→20 precedence as loading the original
-resources separately.
+## Attribution and distribution
 
-Native SOL Engine validates and mounts the adjacent bundle itself, so normal
-gameplay and editor playtests do not pass it as a command-line resource. The
-equivalent compatibility argument for pre-v0.3 UZDoom development binaries is:
-
-```text
--file sol.pk3
-```
-
-No gameplay extraction layer is required. This also avoids destructive
-flattening: identically named `ZSCRIPT`, `MAPINFO`, `DECORATE`, `MENUDEF`, sprite,
-or sound paths remain isolated in their original child archives until the engine
-mounts them in order.
-
-`SOLPACK.json` records each carrier name, original materialized filename,
-component kind, source identity, distribution status, and SHA-256. The verifier
-checks the complete member set and every child hash before launch.
-
-## Editor authoring
-
-Ultimate Doom Builder needs direct resource paths for its authoring data set, so
-`sol-edit` materializes only wadpack entries 1–18 from `sol.pk3` into a cache
-keyed by the complete bundle hash. Those files are exposed to UDB in-memory and
-are not written over the user's normal resource configuration.
-
-In-editor playtests do not use the materialized copies. With native SOL Engine,
-the test wrapper lets the engine load its sidecar and appends UDB's temporary
-map/resource arguments, so the temporary map retains final precedence. The
-legacy compatibility path passes `sol.pk3` before those temporary arguments.
-
-Once `sol.pk3` exists and verifies against the current contracts, the loose
-`vend/wadpack/runtime` files are no longer a normal gameplay/editor-test runtime
-dependency. They remain build inputs for regenerating the bundle.
-
-## Package placement
-
-A successful bundle build copies the same `sol.pk3` into:
-
-- `sol-editor/build/sol/sol.pk3`
-- `sol-editor/Build/sol.pk3` when the editor has been built
-- `sol-engine/build/sol/sol.pk3`
-- `sol-engine/build/sol-local/sol.pk3` for the default local engine build
-- the directories containing configured `SOL_ENGINE` and `SOL_EDITOR`
-  executables when available
-
-The local engine build helper detects the native `sol-engine` binary and never
-overwrites it with the obsolete shell launcher. The bundle helper copies
-`sol.pk3` beside that executable; AppImage sidecars are copied beside the outer
-AppImage file. A user-owned registered `DOOM.WAD` or `DOOMU.WAD` remains
-required.
-
-The engine-side `tools/sol-package.sh` converges on the same final bundle when
-the sibling editor and complete wadpack are available. During first-run setup it
-can still emit the small SOL-owned runtime component so workspace initialization
-is not blocked before third-party import.
-
-## Attribution and licensing
-
-`THIRD_PARTY.md` is committed in both SOL repositories and embedded in
-`sol.pk3`. Upstream archive bytes are preserved intact, including license/readme
-files contained by those archives.
-
-The Universal Ambience distribution page identifies Universal Ambience, Cosmo
-ambience, and Ambient decorations as one numbered package and labels the package
-GPL. Its published credits include McTed, Heydoomer, Agent Ash, Boondorl,
-Dr_Cosmobyte, and several external sound sources. Because externally sourced
-audio may have separate terms, entries 15–17 retain an asset-level review
-requirement. Entry 16 is also a supplied edited variant, so its exact hash and
-modification provenance must remain recorded.
-
-TargetSpy v3.1.0 declares GPL-3.0-only and © 2026 Alexander Kromm. The full
-source/credit inventory is in `THIRD_PARTY.md` and `sol-project/wadpack.json`.
-
-Attribution does not itself grant redistribution rights. Several components
-still require asset/license review. HQ PlayStation music is an accidental
-contract-2 input scheduled for retirement in engine v0.4.0, while PlayStation
-sound effects remain a local placeholder until original SOL sounds replace
-them. Neither is cleared for redistribution while present. The complete
-`sol.pk3` may be generated and copied into local SOL engine/editor packages for
-development and testing, but it must not be committed to this public repository
-or attached to a public release until the third-party redistribution audit is
-complete.
+The engine `THIRD_PARTY.md` is canonical for bundle provenance. Attribution does
+not grant redistribution permission. HQ PlayStation music is retired; slot 12
+PlayStation sound effects remain a local placeholder; PreciseCrosshair occupies
+slot 19 with its GPL/libeye notice recorded for review. The complete `sol.pk3`
+remains a local development/test artifact until every included resource is
+cleared.

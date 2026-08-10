@@ -12,12 +12,14 @@ set -a
 source "$env_file"
 set +a
 
-manifest=${SOL_WADPACK_MANIFEST:-"$root/sol-project/wadpack.json"}
-version_file=${SOL_VERSION_FILE:-"$root/sol/version.json"}
-bundle=${SOL_BUNDLE:-"$root/build/sol/sol.pk3"}
+workspace=${SOL_WORKSPACE:-$(cd "$root/.." && pwd)}
+engine_root=${SOL_ENGINE_ROOT:-"$workspace/sol-engine"}
+manifest=${SOL_WADPACK_MANIFEST:-"$engine_root/sol/wadpack.json"}
+version_file=${SOL_VERSION_FILE:-"$engine_root/sol/version.json"}
+bundle=${SOL_BUNDLE:-"$engine_root/build/sol/sol.pk3"}
 bundle_tool=(python3 "$root/tools/sol-bundle.py")
 
-bundle=$(SOL_BUNDLE="$bundle" bash "$root/tools/sol-bundle.sh")
+bundle=$(SOL_ENGINE_ROOT="$engine_root" SOL_BUNDLE="$bundle" bash "$root/tools/sol-bundle.sh")
 "${bundle_tool[@]}" verify \
     --bundle "$bundle" --manifest "$manifest" --version-file "$version_file" \
     >/dev/null
@@ -32,9 +34,6 @@ if ((has_iwad == 0)); then
     args=(-iwad "$(realpath "$DOOM_IWAD")")
 fi
 
-# Native SOL Engine mounts the verified sidecar itself. Keep one compatibility
-# path for pre-v0.3 UZDoom binaries; UDB's temporary map arguments always follow
-# the canonical bundle and retain final test-map precedence.
 is_native_sol_engine() {
     local name
     for name in "$(basename "$1")" "$(basename "$(realpath "$1")")"; do

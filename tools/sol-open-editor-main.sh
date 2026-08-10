@@ -12,15 +12,17 @@ set -a
 source "$env_file"
 set +a
 
-manifest=${SOL_WADPACK_MANIFEST:-"$root/sol-project/wadpack.json"}
-version_file=${SOL_VERSION_FILE:-"$root/sol/version.json"}
-bundle=${SOL_BUNDLE:-"$root/build/sol/sol.pk3"}
+workspace=${SOL_WORKSPACE:-$(cd "$root/.." && pwd)}
+engine_root=${SOL_ENGINE_ROOT:-"$workspace/sol-engine"}
+manifest=${SOL_WADPACK_MANIFEST:-"$engine_root/sol/wadpack.json"}
+version_file=${SOL_VERSION_FILE:-"$engine_root/sol/version.json"}
+bundle=${SOL_BUNDLE:-"$engine_root/build/sol/sol.pk3"}
 cache=${SOL_BUNDLE_CACHE:-"$root/build/sol/materialized"}
 bundle_tool=(python3 "$root/tools/sol-bundle.py")
 resources_file="$root/sol-project/.udb/sol-wadpack.resources.txt"
 mkdir -p "$root/sol-project/.udb"
 
-bundle=$(SOL_BUNDLE="$bundle" bash "$root/tools/sol-bundle.sh")
+bundle=$(SOL_ENGINE_ROOT="$engine_root" SOL_BUNDLE="$bundle" bash "$root/tools/sol-bundle.sh")
 "${bundle_tool[@]}" materialize \
     --bundle "$bundle" --directory "$cache" --scope wadpack \
     --manifest "$manifest" --version-file "$version_file" \

@@ -1,9 +1,13 @@
-SOL v0.2.0 story-authoring foundation
-Map: E1M1 — Hangar: Arrival
+SOL! v0.4.0 engine-contract testbed
+Map: E1M1 — TESTMAP
 Format: UDMF
-Zones: 14
-Monsters: 176 staged graybox placements
-Wadpack contract: 2 / 18 locked resources
-Bundle contract: 1 / sol.pk3
+Rooms: 10 / 36 connected sectors
+Monsters: none
+Impossible space: 1 reciprocal linked-portal pair / geometry contract 1
+Decorations: 108 stock objects for lighting and ambience coverage
+Weapons: shotgun, chaingun, chainsaw, rocket launcher, plasma rifle, BFG
+Wadpack contract: 3 / 18 active resources / 20 logical slots
+Bundle contract: 2 / sol.pk3 / runtime slot 21 / content slot 22
+SOL! defaults contract: 1
 Story contract: 1
 Generated source: tools/sol-generate-e1m1.py
