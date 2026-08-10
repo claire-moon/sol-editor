@@ -16,7 +16,11 @@ DECORATION_TYPES = {15, 18, 19, 20, 21, 22, 34, 35, 44, 45, 46, 55, 56, 57, 2035
 BLOCK_KINDS = ("vertex", "linedef", "sidedef", "sector", "thing")
 PORTAL_SPECIAL = 156
 PORTAL_TYPE_LINKED = 3
-PORTAL_IDS = {9001: 9002, 9002: 9001}
+PORTAL_IDS = {9001: 9002, 9002: 9001, 9011: 9012, 9012: 9011}
+ILLUSION_PORTAL_IDS = {9001, 9002}
+PORTAL_LAB_IDS = {9011, 9012}
+DOOR_SPECIAL_OPEN = 11
+PORTAL_LAB_DOOR_TAG = 9100
 
 
 def fail(message):
@@ -129,6 +133,7 @@ def validate_geometry(blocks, stats):
     adjacency = {index: set() for index in range(len(sectors))}
     exit_lines = []
     portal_lines = []
+    portal_lab_door_lines = []
 
     for linedef in linedefs:
         require_index(linedef.get("v1"), len(vertices), "v1")
@@ -170,11 +175,17 @@ def validate_geometry(blocks, stats):
         if linedef.get("special") == PORTAL_SPECIAL:
             portal_lines.append(linedef)
 
+        if (
+            linedef.get("special") == DOOR_SPECIAL_OPEN
+            and linedef.get("arg0") == PORTAL_LAB_DOOR_TAG
+        ):
+            portal_lab_door_lines.append(linedef)
+
     if len(exit_lines) != 1 or exit_lines[0].get("playeruse") is not True:
         fail("expected one player-use Exit_Normal linedef")
 
-    if len(portal_lines) != 2 or stats.get("linked_portals") != 2:
-        fail("TESTMAP must contain exactly one reciprocal linked-portal pair")
+    if len(portal_lines) != 4 or stats.get("linked_portals") != 4:
+        fail("TESTMAP must contain exactly two reciprocal linked-portal pairs")
 
     seen_ids = set()
     for portal in portal_lines:
@@ -189,9 +200,31 @@ def validate_geometry(blocks, stats):
         seen_ids.add(line_id)
 
     if seen_ids != set(PORTAL_IDS):
-        fail("TESTMAP linked portal pair is incomplete")
+        fail("TESTMAP linked portal pairs are incomplete")
 
-    if len(sectors) != stats["sectors"] or len(sectors) < 30:
+    if stats.get("portal_pairs") != 2:
+        fail("TESTMAP portal-pair metadata is incorrect")
+
+    if set(stats.get("illusion_portal_ids", [])) != ILLUSION_PORTAL_IDS:
+        fail("TESTMAP illusion portal metadata is incorrect")
+
+    if set(stats.get("portal_lab_ids", [])) != PORTAL_LAB_IDS:
+        fail("TESTMAP portal-lab metadata is incorrect")
+
+    if len(portal_lab_door_lines) != 1 or stats.get("portal_lab_doors") != 1:
+        fail("TESTMAP must contain exactly one portal-lab access door")
+
+    door_line = portal_lab_door_lines[0]
+    if door_line.get("playeruse") is not True or door_line.get("arg1", 0) <= 0:
+        fail("portal-lab door must be a usable positive-speed Door_Open line")
+
+    door_sectors = [sector for sector in sectors if sector.get("id") == PORTAL_LAB_DOOR_TAG]
+    if len(door_sectors) != 1:
+        fail("portal-lab door sector tag is missing or duplicated")
+    if door_sectors[0].get("heightceiling") != door_sectors[0].get("heightfloor"):
+        fail("portal-lab door sector must start closed")
+
+    if len(sectors) != stats["sectors"] or len(sectors) < 40:
         fail("systems-test sector budget is too small")
 
     visited = {0}
@@ -243,10 +276,10 @@ def validate_things(things, stats):
     if monster_count != 0 or stats.get("monsters") != 0:
         fail(f"TESTMAP must be monster-free, found {monster_count}")
 
-    if decoration_count != stats["decorations"] or decoration_count < 90:
+    if decoration_count != stats["decorations"] or decoration_count < 120:
         fail(
             "decoration coverage mismatch: "
-            f"expected at least 90, found {decoration_count}"
+            f"expected at least 120, found {decoration_count}"
         )
 
     for player_start in (1, 2, 3, 4):
@@ -318,7 +351,7 @@ def main():
         or stats.get("version") != "0.4.0"
         or stats.get("testbed_contract") != 1
         or stats.get("geometry_contract") != 1
-        or stats.get("rooms", 0) < 8
+        or stats.get("rooms", 0) < 10
         or stats.get("weapons") != len(REQUIRED_WEAPONS)
     ):
         fail("generated metadata does not match the v0.4.0 TESTMAP contract")
