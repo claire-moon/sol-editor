@@ -48,6 +48,17 @@ CELLS = {
     (9, 5): "Exit",
     (10, 5): "Exit",
     (10, 4): "Exit",
+    (-1, 4): "Illusion Buffer",
+    (0, 4): "Illusion Chamber",
+    (11, 5): "Illusion Chamber",
+    (12, 5): "Illusion Buffer",
+    (0, 1): "Portal Buffer",
+    (1, 1): "Portal Lab",
+    (2, 1): "Portal Door",
+    (1, 0): "Portal Lab",
+    (2, 0): "Portal Lab",
+    (2, -1): "Portal Lab",
+    (3, -1): "Portal Buffer",
 }
 
 THEMES = {
@@ -61,6 +72,11 @@ THEMES = {
     "Reactor": ("METAL1", "NUKAGE1", "CEIL5_1", 112, -8, 192),
     "Courtyard": ("STONE2", "FLAT14", "F_SKY1", 224, 0, 256),
     "Exit": ("STARTAN3", "FLOOR4_8", "CEIL3_5", 160, 0, 144),
+    "Illusion Buffer": ("STONE2", "FLAT14", "CEIL5_1", 144, 0, 160),
+    "Illusion Chamber": ("STONE2", "FLAT14", "CEIL5_1", 144, 0, 160),
+    "Portal Buffer": ("TEKWALL1", "FLAT14", "CEIL5_1", 176, 0, 160),
+    "Portal Lab": ("TEKWALL1", "FLAT14", "CEIL5_1", 192, 0, 160),
+    "Portal Door": ("STARGR2", "FLOOR4_8", "CEIL3_5", 128, 8, 8),
 }
 
 WEAPON_TYPES = (2001, 2002, 2003, 2004, 2005, 2006)
@@ -72,8 +88,24 @@ EXIT_EDGE = "east"
 PORTAL_TYPE_LINKED = 3
 PORTAL_SPECIAL = 156
 PORTAL_LINKS = {
-    frozenset(((1, 3), (2, 3))): (9001, 9002, False),
-    frozenset(((8, 3), (9, 3))): (9002, 9001, True),
+    frozenset(((-1, 4), (0, 4))): (9001, 9002, True),
+    frozenset(((11, 5), (12, 5))): (9002, 9001, False),
+    frozenset(((0, 1), (1, 1))): (9011, 9012, True),
+    frozenset(((2, -1), (3, -1))): (9012, 9011, False),
+}
+
+DOOR_OPEN_SPECIAL = 11
+PORTAL_LAB_DOOR_CELL = (2, 1)
+PORTAL_LAB_DOOR_SECTOR = 9100
+PORTAL_LAB_DOOR_LINK = frozenset(((2, 1), (3, 1)))
+PORTAL_LAB_DOOR_SPEED = 32
+
+NON_PLAYABLE_CELLS = {
+    (-1, 4),
+    (12, 5),
+    (0, 1),
+    (3, -1),
+    PORTAL_LAB_DOOR_CELL,
 }
 
 
@@ -116,7 +148,7 @@ def make_geometry():
     for cell in ordered_cells:
         theme_name = CELLS[cell]
         wall, floor, ceiling, light, floor_height, ceiling_height = THEMES[theme_name]
-        sectors.append({
+        sector = {
             "cell": cell,
             "name": theme_name,
             "wall": wall,
@@ -125,7 +157,12 @@ def make_geometry():
             "light": light,
             "floor_height": floor_height,
             "ceiling_height": ceiling_height,
-        })
+        }
+
+        if cell == PORTAL_LAB_DOOR_CELL:
+            sector["id"] = PORTAL_LAB_DOOR_SECTOR
+
+        sectors.append(sector)
 
         gx, gy = cell
         for edge_name, p1, p2 in cell_edges(gx, gy):
@@ -195,6 +232,16 @@ def make_geometry():
                     "arg3": 0,
                     "arg4": 0,
                 })
+            elif cell_pair == PORTAL_LAB_DOOR_LINK:
+                linedef.update({
+                    "special": DOOR_OPEN_SPECIAL,
+                    "arg0": PORTAL_LAB_DOOR_SECTOR,
+                    "arg1": PORTAL_LAB_DOOR_SPEED,
+                    "arg2": 0,
+                    "arg3": 0,
+                    "arg4": 0,
+                    "playeruse": True,
+                })
 
             linedefs.append(linedef)
             continue
@@ -249,8 +296,13 @@ def make_things(ordered_cells):
     for (gx, gy), thing_type in weapon_cells:
         add_thing(things, gx * CELL + 256, gy * CELL + 256, thing_type)
 
+    playable_cells = [
+        cell
+        for cell in ordered_cells
+        if cell not in NON_PLAYABLE_CELLS
+    ]
     supply_types = (2007, 2008, 2010, 2047, 2011, 2012, 2014, 2015, 2018, 2019, 2023, 2013)
-    for index, (gx, gy) in enumerate(ordered_cells):
+    for index, (gx, gy) in enumerate(playable_cells):
         if index % 2 == 0:
             add_thing(
                 things,
@@ -261,7 +313,7 @@ def make_things(ordered_cells):
             )
 
     decoration_count = 0
-    for index, (gx, gy) in enumerate(ordered_cells):
+    for index, (gx, gy) in enumerate(playable_cells):
         decoration_types = (
             2035,
             DECORATION_TYPES[(index + 3) % len(DECORATION_TYPES)],
@@ -300,13 +352,18 @@ def make_textmap():
     for index, sector in enumerate(sectors):
         gx, gy = sector["cell"]
         out.append(f'// sector {index}: {sector["name"]} cell {gx},{gy}\n')
-        out.append(block("sector", [
+        values = [
             ("heightfloor", sector["floor_height"]),
             ("heightceiling", sector["ceiling_height"]),
             ("texturefloor", sector["floor"]),
             ("textureceiling", sector["ceiling"]),
             ("lightlevel", sector["light"]),
-        ]))
+        ]
+
+        if "id" in sector:
+            values.append(("id", sector["id"]))
+
+        out.append(block("sector", values))
 
     for thing in things:
         values = list(thing.items())
@@ -343,6 +400,8 @@ def make_textmap():
         "weapons": len(WEAPON_TYPES),
         "rooms": len(set(CELLS.values())),
         "linked_portals": len(PORTAL_LINKS),
+        "linked_portal_pairs": len(PORTAL_LINKS) // 2,
+        "door_open_lines": 1,
     }
 
     return "\n".join(out).encode(), stats
@@ -369,10 +428,12 @@ def svg():
     cells = sorted(CELLS, key=lambda point: (point[1], point[0]))
     scale = 72
     margin = 24
+    min_x = min(x for x, _ in cells)
+    min_y = min(y for _, y in cells)
     max_x = max(x for x, _ in cells)
     max_y = max(y for _, y in cells)
-    width = (max_x + 1) * scale + margin * 2
-    height = (max_y + 1) * scale + margin * 2
+    width = (max_x - min_x + 1) * scale + margin * 2
+    height = (max_y - min_y + 1) * scale + margin * 2
     parts = [
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" '
         f'viewBox="0 0 {width} {height}">',
@@ -381,7 +442,7 @@ def svg():
 
     for gx, gy in cells:
         room = CELLS[(gx, gy)]
-        x = margin + gx * scale
+        x = margin + (gx - min_x) * scale
         y = margin + (max_y - gy) * scale
         parts.append(
             f'<rect x="{x}" y="{y}" width="{scale}" height="{scale}" '
