@@ -77,9 +77,9 @@ asset has documented redistribution permission.
 ## TESTMAP systems testbed
 
 `tools/sol-generate-e1m1.py` is the deterministic source of the test map. E1M1
-is presented to the player as `TESTMAP`. The v0.4 fixture contains ten functional
-room themes represented by 36 connected sectors across a two-dimensional layout
-rather than a linear strip.
+is presented to the player as `TESTMAP`. The v0.4 fixture contains thirteen
+functional room themes represented by 43 connected sectors across a
+two-dimensional layout rather than a linear strip.
 
 Coverage includes:
 
@@ -87,16 +87,17 @@ Coverage includes:
   materials;
 - broad light-level and floor/ceiling-height variation;
 - no monsters;
-- one reciprocal linked line-portal pair under SOL! geometry contract 1, joining
-  physically remote thresholds to demonstrate an impossible adjacency;
+- one stateful SOL phase source (9001) at the physical entrance to a local
+  dead-end room, with a destination-only teleport-style anchor (9002), plus an
+  independent reciprocal 9011/9012 linked-portal laboratory;
 - shotgun, chaingun, chainsaw, rocket launcher, plasma rifle, and BFG;
 - ammunition, health, armor, powerups, and multiplayer starts;
-- 108 stock barrels, torches/candelabras, corpses, and other decorations to
+- 129 stock barrels, torches/candelabras, corpses, and other decorations to
   exercise ReLite and Universal Ambience behavior;
 - a normal player-use exit and connected-sector validation.
 
 Tracked `stats.json` and `layout.svg` must match deterministic generator output.
-`tools/sol-validate-e1m1.py` rejects monsters, malformed or non-reciprocal linked
+`tools/sol-validate-e1m1.py` rejects monsters, malformed phase or linked
 portals, disconnected geometry, reduced material or lighting coverage, missing
 weapons/starts, inadequate prop coverage, invalid bounds, and contract drift.
 

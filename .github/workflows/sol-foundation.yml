@@ -90,7 +90,9 @@ jobs:
           assert project['testbed_contract'] == 1
           assert project['geometry_contract'] == 1
           assert project['monster_profile'] == 'none'
-          assert project['linked_portals'] == 4
+          assert project['linked_portals'] == 2
+          assert project['phase_portal_sources'] == 1
+          assert project['phase_portal_anchors'] == 1
           assert project['bundle_contract'] == 2
           assert project['wadpack_contract'] == 3
           assert pointer['deprecated'] is True
@@ -136,11 +138,13 @@ jobs:
           stats = json.load(open('sol-project/maps/e1m1/stats.json'))
           assert stats['title'] == 'TESTMAP'
           assert stats['geometry_contract'] == 1
-          assert stats['rooms'] == 12
-          assert stats['sectors'] == 41
+          assert stats['rooms'] == 13
+          assert stats['sectors'] == 43
           assert stats['monsters'] == 0
-          assert stats['linked_portals'] == 4
-          assert stats['decorations'] == 123
+          assert stats['linked_portals'] == 2
+          assert stats['phase_portal_sources'] == 1
+          assert stats['phase_portal_anchors'] == 1
+          assert stats['decorations'] == 129
           assert stats['weapons'] == 6
           PY
       - name: Verify pinned DoomTools revision

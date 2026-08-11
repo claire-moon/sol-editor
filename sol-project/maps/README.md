@@ -1,6 +1,6 @@
 # SOL map sources
 
-`tools/sol-generate-e1m1.py` is the source of truth for the first playable **Hangar: Arrival** graybox. It generates an editable UDMF PWAD, readable `TEXTMAP.txt`, statistics, and a layout overview.
+`tools/sol-generate-e1m1.py` is the source of truth for the first playable **Hangar: Arrival** graybox. It generates an editable UDMF PWAD, readable `TEXTMAP.txt`, statistics, and a layout overview. The fixture has one map-authored SOL phase portal: 9001 is the physical entrance to the local dead-end Phase Room and 9002 is its destination-only remote anchor. The retained `user_sol_phase_*` UDMF properties declare its group, local inside side, arm depth, and deterministic entry/reveal thresholds. The independent 9011/9012 lab remains a conventional reciprocal linked portal.
 
 Committed review artifacts:
 

@@ -15,10 +15,11 @@ REQUIRED_WEAPONS = {2001, 2002, 2003, 2004, 2005, 2006}
 DECORATION_TYPES = {15, 18, 19, 20, 21, 22, 34, 35, 44, 45, 46, 55, 56, 57, 2035}
 BLOCK_KINDS = ("vertex", "linedef", "sidedef", "sector", "thing")
 PORTAL_SPECIAL = 156
+PORTAL_TYPE_TELEPORT = 1
 PORTAL_TYPE_LINKED = 3
-PORTAL_IDS = {
-    9001: 9002,
-    9002: 9001,
+PHASE_SOURCE_ID = 9001
+PHASE_DESTINATION_ID = 9002
+LINKED_PORTAL_IDS = {
     9011: 9012,
     9012: 9011,
 }
@@ -208,40 +209,67 @@ def validate_geometry(blocks, stats):
     if door_sector.get("heightceiling") != door_sector.get("heightfloor"):
         fail("portal lab door sector must start closed")
 
-    if len(portal_lines) != 4 or stats.get("linked_portals") != 4:
-        fail("TESTMAP must contain exactly two reciprocal linked-portal pairs")
+    if len(portal_lines) != 4:
+        fail("TESTMAP must contain one phase portal and one linked-portal pair")
 
     seen_ids = set()
     portal_by_id = {}
 
     for portal, front_sector, back_sector in portal_lines:
         line_id = portal.get("id")
-        destination_id = portal.get("arg0")
-
-        if line_id not in PORTAL_IDS or destination_id != PORTAL_IDS[line_id]:
-            fail("TESTMAP linked portal IDs are not reciprocal")
-
-        if portal.get("arg2") != PORTAL_TYPE_LINKED:
-            fail("TESTMAP portal is not a linked portal")
 
         if portal.get("twosided") is not True or back_sector is None:
-            fail("TESTMAP linked portal must have traversable space behind it")
+            fail("TESTMAP portal authoring must retain local two-sided space")
 
         if line_id in portal_by_id:
-            fail(f"duplicate TESTMAP linked portal ID: {line_id}")
+            fail(f"duplicate TESTMAP portal ID: {line_id}")
 
         seen_ids.add(line_id)
-        portal_by_id[line_id] = (front_sector, back_sector)
+        portal_by_id[line_id] = (portal, front_sector, back_sector)
 
-    if seen_ids != set(PORTAL_IDS):
-        fail("TESTMAP linked portal pairs are incomplete")
+    if seen_ids != {PHASE_SOURCE_ID, PHASE_DESTINATION_ID, *LINKED_PORTAL_IDS}:
+        fail("TESTMAP phase and linked portal IDs are incomplete")
 
-    for line_id, destination_id in PORTAL_IDS.items():
-        source_sectors = portal_by_id[line_id]
-        destination_sectors = portal_by_id[destination_id]
+    phase_source, phase_inside_sector, phase_outside_sector = portal_by_id[PHASE_SOURCE_ID]
+    phase_destination, _, _ = portal_by_id[PHASE_DESTINATION_ID]
+    if (
+        phase_source.get("arg0") != PHASE_DESTINATION_ID
+        or phase_source.get("arg2") != PORTAL_TYPE_TELEPORT
+        or phase_source.get("user_sol_phase_role") != "source"
+        or phase_source.get("user_sol_phase_group") != 1
+        or phase_source.get("user_sol_phase_inside_side") != 0
+        or phase_source.get("user_sol_phase_arm_depth") < 256
+        or not 0 < phase_source.get("user_sol_phase_entry_dot", 0) <= 1
+        or not 0 < phase_source.get("user_sol_phase_reveal_dot", 0) <= 1
+    ):
+        fail("9001 must be a map-authored teleport-style SOL phase source")
 
-        for source_sector in source_sectors:
-            adjacency[source_sector].update(destination_sectors)
+    if (
+        phase_destination.get("arg0") != 0
+        or phase_destination.get("arg2") != PORTAL_TYPE_TELEPORT
+        or phase_destination.get("user_sol_phase_role") != "destination"
+        or phase_destination.get("user_sol_phase_group") != 1
+    ):
+        fail("9002 must be a destination-only SOL phase anchor")
+
+    # The phase doorway remains physically local. Its front sector is the
+    # illusion-room interior and must extend to a genuine dead end before the
+    # remote view can ever be armed.
+    local_inside_neighbors = adjacency[phase_inside_sector] - {phase_outside_sector}
+    if not local_inside_neighbors or not any(len(adjacency[sector]) == 1 for sector in local_inside_neighbors):
+        fail("9001 must be the entrance to a local dead-end phase room")
+
+    if stats.get("linked_portals") != 2 or stats.get("phase_portal_sources") != 1 or stats.get("phase_portal_anchors") != 1:
+        fail("TESTMAP portal statistics do not match phase and linked semantics")
+
+    for line_id, destination_id in LINKED_PORTAL_IDS.items():
+        portal, source_front, source_back = portal_by_id[line_id]
+        destination, destination_front, destination_back = portal_by_id[destination_id]
+        if portal.get("arg0") != destination_id or portal.get("arg2") != PORTAL_TYPE_LINKED:
+            fail("9011/9012 must remain reciprocal linked portals")
+
+        adjacency[source_front].update((destination_front, destination_back))
+        adjacency[source_back].update((destination_front, destination_back))
 
     if len(sectors) != stats["sectors"] or len(sectors) < 40:
         fail("systems-test sector budget is too small")
@@ -284,7 +312,7 @@ def validate_geometry(blocks, stats):
         fail("systems-test wall texture coverage is incomplete")
 
 
-def validate_things(things, stats):
+def validate_things(things, stats, blocks):
     types = [thing.get("type") for thing in things]
     monster_count = sum(thing_type in MONSTER_TYPES for thing_type in types)
     decoration_count = sum(
@@ -304,6 +332,24 @@ def validate_things(things, stats):
     for player_start in (1, 2, 3, 4):
         if types.count(player_start) != 1:
             fail(f"expected exactly one player-{player_start} start")
+
+    player_one = next(thing for thing in things if thing.get("type") == 1)
+    phase_source = next(
+        line for line in blocks["linedef"]
+        if line.get("id") == PHASE_SOURCE_ID
+    )
+    vertices = blocks["vertex"]
+    source_v1 = vertices[phase_source["v1"]]
+    source_v2 = vertices[phase_source["v2"]]
+    dx = source_v2["x"] - source_v1["x"]
+    dy = source_v2["y"] - source_v1["y"]
+    cross = dx * (player_one["y"] - source_v1["y"]) - dy * (player_one["x"] - source_v1["x"])
+    distance = abs(cross) / (dx * dx + dy * dy) ** 0.5
+    # UZDoom's side 0 is the right side of the linedef. The source's authored
+    # inside side is 0, so Player 1 must start on the opposite local side and
+    # clear of the arm depth/threshold ambiguity.
+    if cross <= 0 or distance < 128:
+        fail("Player 1 start must be in the ordinary staging area outside 9001")
 
     missing_weapons = sorted(REQUIRED_WEAPONS - set(types))
 
@@ -376,7 +422,7 @@ def main():
         fail("generated metadata does not match the v0.4.0 TESTMAP contract")
 
     validate_geometry(blocks, stats)
-    validate_things(blocks["thing"], stats)
+    validate_things(blocks["thing"], stats, blocks)
     print(json.dumps(stats, sort_keys=True))
 
 
