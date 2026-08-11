@@ -14,9 +14,10 @@ CELL = 512
 CELLS = {
     (0, 3): "Arrival",
     (1, 3): "Security",
+    (1, 4): "Phase Room",
+    (1, 5): "Phase Room",
     (2, 2): "Atrium",
     (2, 3): "Atrium",
-    (2, 4): "Atrium",
     (3, 2): "Atrium",
     (3, 3): "Atrium",
     (3, 4): "Atrium",
@@ -48,11 +49,20 @@ CELLS = {
     (9, 5): "Exit",
     (10, 5): "Exit",
     (10, 4): "Exit",
+    (3, 6): "Portal Door",
+    (3, 7): "Portal Lab",
+    (4, 7): "Portal Lab",
+    (0, 8): "Portal Lab",
+    (1, 8): "Portal Lab",
 }
 
 THEMES = {
     "Arrival": ("STARTAN3", "FLOOR4_8", "CEIL3_5", 176, 0, 144),
     "Security": ("STARGR2", "FLOOR4_6", "CEIL3_5", 160, 0, 144),
+    # METAL1 is present in the registered Doom IWAD used by the native fixture
+    # playtest.  METAL2 is not, which made the room look like a rendering
+    # failure instead of a deliberately ordinary local dead end.
+    "Phase Room": ("METAL1", "FLOOR4_8", "CEIL3_5", 160, 0, 144),
     "Atrium": ("BROWN1", "FLOOR5_1", "CEIL5_1", 192, 0, 224),
     "Storage": ("GRAY1", "FLOOR4_8", "CEIL3_5", 128, 8, 136),
     "Service": ("ICKWALL1", "NUKAGE1", "CEIL1_1", 96, 0, 128),
@@ -61,6 +71,8 @@ THEMES = {
     "Reactor": ("METAL1", "NUKAGE1", "CEIL5_1", 112, -8, 192),
     "Courtyard": ("STONE2", "FLAT14", "F_SKY1", 224, 0, 256),
     "Exit": ("STARTAN3", "FLOOR4_8", "CEIL3_5", 160, 0, 144),
+    "Portal Door": ("DOOR3", "FLAT14", "CEIL5_1", 144, 0, 0),
+    "Portal Lab": ("TEKWALL4", "FLAT14", "CEIL5_1", 192, 0, 160),
 }
 
 WEAPON_TYPES = (2001, 2002, 2003, 2004, 2005, 2006)
@@ -69,12 +81,54 @@ DECORATION_TYPES = (2035, 34, 35, 44, 45, 46, 55, 56, 57, 15, 18, 19, 20, 21, 22
 EXIT_CELL = (10, 4)
 EXIT_EDGE = "east"
 
+PORTAL_TYPE_TELEPORT = 1
 PORTAL_TYPE_LINKED = 3
 PORTAL_SPECIAL = 156
-PORTAL_LINKS = {
-    frozenset(((1, 3), (2, 3))): (9001, 9002, False),
-    frozenset(((8, 3), (9, 3))): (9002, 9001, True),
+DOOR_SPECIAL = 11
+PORTAL_DOOR_CELL = (3, 6)
+PORTAL_DOOR_ID = 9100
+PORTAL_DOOR_TRIGGER = frozenset(((3, 5), PORTAL_DOOR_CELL))
+PHASE_PORTAL_LINES = {
+    # The source is the physical entrance to a genuinely local dead-end room.
+    # It is deliberately oriented with the illusion-room interior on side 0 so
+    # the stock teleport portal's front-to-back traversal matches the revealed
+    # interior-to-exterior exit direction.
+    frozenset(((1, 3), (1, 4))): {
+        "id": 9001,
+        "destination": 9002,
+        "reverse": True,
+        "role": "source",
+        "group": 1,
+        "inside_side": 0,
+        "arm_depth": 384.0,
+        "entry_dot": 0.2,
+        "reveal_dot": 0.3,
+    },
+    # This is only an ordinary local doorway until a source-side phase portal
+    # is revealed. It never points back at the phase room.
+    frozenset(((8, 3), (9, 3))): {
+        "id": 9002,
+        "destination": 0,
+        "reverse": False,
+        "role": "destination",
+        "group": 1,
+    },
 }
+
+LINKED_PORTAL_LINES = {
+    frozenset(((3, 7), (4, 7))): (9011, 9012, False),
+    frozenset(((0, 8), (1, 8))): (9012, 9011, True),
+}
+
+# The phase-room regression needs an unobstructed, repeatable route through the
+# actual doorway.  Generic scenery is intentionally omitted from the approach
+# and both local phase-room cells; the rest of TESTMAP remains densely dressed.
+# This is a fixture authoring invariant, not an engine-side coordinate rule.
+PHASE_CLEAR_CELLS = frozenset({(1, 3), (1, 4), (1, 5)})
+# Isolating the Phase Room removes one formerly dressed Atrium cell. Keep the
+# rest of this systems fixture at its established decoration-density budget,
+# well away from the phase-room route.
+EXTRA_DECORATION_CELLS = frozenset({(3, 3)})
 
 
 def block(kind, values):
@@ -125,6 +179,7 @@ def make_geometry():
             "light": light,
             "floor_height": floor_height,
             "ceiling_height": ceiling_height,
+            "id": PORTAL_DOOR_ID if cell == PORTAL_DOOR_CELL else None,
         })
 
         gx, gy = cell
@@ -171,7 +226,9 @@ def make_geometry():
             v1 = vertex(first["p1"])
             v2 = vertex(first["p2"])
             cell_pair = frozenset((first["cell"], second["cell"]))
-            portal = PORTAL_LINKS.get(cell_pair)
+            phase_portal = PHASE_PORTAL_LINES.get(cell_pair)
+            linked_portal = LINKED_PORTAL_LINES.get(cell_pair)
+            is_portal_door_trigger = cell_pair == PORTAL_DOOR_TRIGGER
 
             linedef = {
                 "v1": v1,
@@ -181,8 +238,40 @@ def make_geometry():
                 "twosided": True,
             }
 
-            if portal is not None:
-                line_id, destination_id, reverse = portal
+            if is_portal_door_trigger:
+                linedef.update({
+                    "special": DOOR_SPECIAL,
+                    "arg0": PORTAL_DOOR_ID,
+                    "arg1": 16,
+                    "arg2": 0,
+                    "playeruse": True,
+                })
+
+            if phase_portal is not None:
+                if phase_portal["reverse"]:
+                    linedef["v1"], linedef["v2"] = linedef["v2"], linedef["v1"]
+                    linedef["sidefront"], linedef["sideback"] = linedef["sideback"], linedef["sidefront"]
+                linedef.update({
+                    "id": phase_portal["id"],
+                    "user_sol_phase_role": phase_portal["role"],
+                    "user_sol_phase_group": phase_portal["group"],
+                })
+                if phase_portal["role"] == "source":
+                    linedef.update({
+                        "special": PORTAL_SPECIAL,
+                        "arg0": phase_portal["destination"],
+                        "arg1": 0,
+                        "arg2": PORTAL_TYPE_TELEPORT,
+                        "arg3": 0,
+                        "arg4": 0,
+                        "user_sol_phase_inside_side": phase_portal["inside_side"],
+                        "user_sol_phase_arm_depth": phase_portal["arm_depth"],
+                        "user_sol_phase_entry_dot": phase_portal["entry_dot"],
+                        "user_sol_phase_reveal_dot": phase_portal["reveal_dot"],
+                    })
+
+            if linked_portal is not None:
+                line_id, destination_id, reverse = linked_portal
                 if reverse:
                     linedef["v1"], linedef["v2"] = linedef["v2"], linedef["v1"]
                     linedef["sidefront"], linedef["sideback"] = linedef["sideback"], linedef["sidefront"]
@@ -233,10 +322,12 @@ def add_thing(things, x, y, thing_type, angle=0):
 def make_things(ordered_cells):
     things = []
 
-    add_thing(things, 128, 3 * CELL + 256, 1, 0)
-    add_thing(things, 176, 3 * CELL + 208, 2, 0)
-    add_thing(things, 176, 3 * CELL + 304, 3, 0)
-    add_thing(things, 224, 3 * CELL + 256, 4, 0)
+    # Player 1 begins in the ordinary Arrival staging area, outside the source
+    # span and arm-depth region. Multiplayer starts stay beside it.
+    add_thing(things, 256, 3 * CELL + 256, 1, 0)
+    add_thing(things, 208, 3 * CELL + 208, 2, 0)
+    add_thing(things, 208, 3 * CELL + 304, 3, 0)
+    add_thing(things, 304, 3 * CELL + 256, 4, 0)
 
     weapon_cells = (
         ((1, 3), 2001),
@@ -262,12 +353,18 @@ def make_things(ordered_cells):
 
     decoration_count = 0
     for index, (gx, gy) in enumerate(ordered_cells):
+        if (gx, gy) in PHASE_CLEAR_CELLS:
+            continue
+
         decoration_types = (
             2035,
             DECORATION_TYPES[(index + 3) % len(DECORATION_TYPES)],
             DECORATION_TYPES[(index + 8) % len(DECORATION_TYPES)],
         )
         decoration_positions = ((96, 416), (416, 96), (416, 416))
+        if (gx, gy) in EXTRA_DECORATION_CELLS:
+            decoration_types += (44, 45, 46)
+            decoration_positions += ((96, 256), (256, 96), (416, 256))
 
         for slot, thing_type in enumerate(decoration_types):
             dx, dy = decoration_positions[slot]
@@ -300,13 +397,16 @@ def make_textmap():
     for index, sector in enumerate(sectors):
         gx, gy = sector["cell"]
         out.append(f'// sector {index}: {sector["name"]} cell {gx},{gy}\n')
-        out.append(block("sector", [
+        values = [
             ("heightfloor", sector["floor_height"]),
             ("heightceiling", sector["ceiling_height"]),
             ("texturefloor", sector["floor"]),
             ("textureceiling", sector["ceiling"]),
             ("lightlevel", sector["light"]),
-        ]))
+        ]
+        if sector["id"] is not None:
+            values.append(("id", sector["id"]))
+        out.append(block("sector", values))
 
     for thing in things:
         values = list(thing.items())
@@ -342,7 +442,9 @@ def make_textmap():
         "decorations": decoration_count,
         "weapons": len(WEAPON_TYPES),
         "rooms": len(set(CELLS.values())),
-        "linked_portals": len(PORTAL_LINKS),
+        "linked_portals": len(LINKED_PORTAL_LINES),
+        "phase_portal_sources": 1,
+        "phase_portal_anchors": 1,
     }
 
     return "\n".join(out).encode(), stats
