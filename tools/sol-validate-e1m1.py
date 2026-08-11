@@ -25,6 +25,7 @@ LINKED_PORTAL_IDS = {
 }
 DOOR_SPECIAL = 11
 PORTAL_DOOR_ID = 9100
+PHASE_CLEAR_MARGIN = 128.0
 
 
 def fail(message):
@@ -209,11 +210,19 @@ def validate_geometry(blocks, stats):
     if door_sector.get("heightceiling") != door_sector.get("heightfloor"):
         fail("portal lab door sector must start closed")
 
-    if len(portal_lines) != 4:
-        fail("TESTMAP must contain one phase portal and one linked-portal pair")
+    if len(portal_lines) != 3:
+        fail("TESTMAP must contain one phase source and one linked-portal pair")
 
     seen_ids = set()
     portal_by_id = {}
+    linedef_by_id = {}
+
+    for linedef in linedefs:
+        line_id = linedef.get("id")
+        if line_id is not None:
+            if line_id in linedef_by_id:
+                fail(f"duplicate TESTMAP linedef ID: {line_id}")
+            linedef_by_id[line_id] = linedef
 
     for portal, front_sector, back_sector in portal_lines:
         line_id = portal.get("id")
@@ -227,11 +236,11 @@ def validate_geometry(blocks, stats):
         seen_ids.add(line_id)
         portal_by_id[line_id] = (portal, front_sector, back_sector)
 
-    if seen_ids != {PHASE_SOURCE_ID, PHASE_DESTINATION_ID, *LINKED_PORTAL_IDS}:
-        fail("TESTMAP phase and linked portal IDs are incomplete")
+    if seen_ids != {PHASE_SOURCE_ID, *LINKED_PORTAL_IDS}:
+        fail("TESTMAP phase source and linked portal IDs are incomplete")
 
     phase_source, phase_inside_sector, phase_outside_sector = portal_by_id[PHASE_SOURCE_ID]
-    phase_destination, _, _ = portal_by_id[PHASE_DESTINATION_ID]
+    phase_destination = linedef_by_id.get(PHASE_DESTINATION_ID)
     if (
         phase_source.get("arg0") != PHASE_DESTINATION_ID
         or phase_source.get("arg2") != PORTAL_TYPE_TELEPORT
@@ -245,18 +254,26 @@ def validate_geometry(blocks, stats):
         fail("9001 must be a map-authored teleport-style SOL phase source")
 
     if (
-        phase_destination.get("arg0") != 0
-        or phase_destination.get("arg2") != PORTAL_TYPE_TELEPORT
+        phase_destination is None
+        or phase_destination.get("twosided") is not True
+        or phase_destination.get("special") is not None
         or phase_destination.get("user_sol_phase_role") != "destination"
         or phase_destination.get("user_sol_phase_group") != 1
     ):
-        fail("9002 must be a destination-only SOL phase anchor")
+        fail("9002 must be a two-sided local-only SOL phase destination anchor")
 
     # The phase doorway remains physically local. Its front sector is the
     # illusion-room interior and must extend to a genuine dead end before the
     # remote view can ever be armed.
     local_inside_neighbors = adjacency[phase_inside_sector] - {phase_outside_sector}
-    if not local_inside_neighbors or not any(len(adjacency[sector]) == 1 for sector in local_inside_neighbors):
+    # TESTMAP deliberately makes the phase room a one-entrance local corridor:
+    # no lateral route may bypass the source doorway into ordinary map space.
+    # The previous fixture still had an Atrium connection beside the room, which
+    # made the visual test look like a portal failure even while the source
+    # state machine was correct.
+    if len(local_inside_neighbors) != 1:
+        fail("9001's inside sector must have exactly one local dead-end continuation")
+    if not any(len(adjacency[sector]) == 1 for sector in local_inside_neighbors):
         fail("9001 must be the entrance to a local dead-end phase room")
 
     if stats.get("linked_portals") != 2 or stats.get("phase_portal_sources") != 1 or stats.get("phase_portal_anchors") != 1:
@@ -350,6 +367,33 @@ def validate_things(things, stats, blocks):
     # clear of the arm depth/threshold ambiguity.
     if cross <= 0 or distance < 128:
         fail("Player 1 start must be in the ordinary staging area outside 9001")
+
+    # The source is both a normal local doorway and the phase transition.  Keep
+    # a player-width-safe authored route from the approach through the arm
+    # depth: a solid decorative prop in that lane makes the backward-entry
+    # regression look like a portal/collision fault.  This uses the map-authored
+    # source line and arm depth, never a TESTMAP coordinate special case.
+    line_length = (dx * dx + dy * dy) ** 0.5
+    tangent_x = dx / line_length
+    tangent_y = dy / line_length
+    inward_x = dy / line_length
+    inward_y = -dx / line_length
+    arm_depth = phase_source["user_sol_phase_arm_depth"]
+
+    for thing in things:
+        if thing.get("type") not in DECORATION_TYPES:
+            continue
+
+        relative_x = thing["x"] - source_v1["x"]
+        relative_y = thing["y"] - source_v1["y"]
+        tangent = relative_x * tangent_x + relative_y * tangent_y
+        depth = relative_x * inward_x + relative_y * inward_y
+
+        if (
+            0 <= tangent <= line_length
+            and -PHASE_CLEAR_MARGIN <= depth <= arm_depth + PHASE_CLEAR_MARGIN
+        ):
+            fail("phase source route must remain clear of decorative blockers")
 
     missing_weapons = sorted(REQUIRED_WEAPONS - set(types))
 

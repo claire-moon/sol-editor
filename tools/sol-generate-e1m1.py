@@ -18,7 +18,6 @@ CELLS = {
     (1, 5): "Phase Room",
     (2, 2): "Atrium",
     (2, 3): "Atrium",
-    (2, 4): "Atrium",
     (3, 2): "Atrium",
     (3, 3): "Atrium",
     (3, 4): "Atrium",
@@ -60,7 +59,10 @@ CELLS = {
 THEMES = {
     "Arrival": ("STARTAN3", "FLOOR4_8", "CEIL3_5", 176, 0, 144),
     "Security": ("STARGR2", "FLOOR4_6", "CEIL3_5", 160, 0, 144),
-    "Phase Room": ("METAL2", "FLOOR4_8", "CEIL3_5", 128, 0, 144),
+    # METAL1 is present in the registered Doom IWAD used by the native fixture
+    # playtest.  METAL2 is not, which made the room look like a rendering
+    # failure instead of a deliberately ordinary local dead end.
+    "Phase Room": ("METAL1", "FLOOR4_8", "CEIL3_5", 160, 0, 144),
     "Atrium": ("BROWN1", "FLOOR5_1", "CEIL5_1", 192, 0, 224),
     "Storage": ("GRAY1", "FLOOR4_8", "CEIL3_5", 128, 8, 136),
     "Service": ("ICKWALL1", "NUKAGE1", "CEIL1_1", 96, 0, 128),
@@ -117,6 +119,16 @@ LINKED_PORTAL_LINES = {
     frozenset(((3, 7), (4, 7))): (9011, 9012, False),
     frozenset(((0, 8), (1, 8))): (9012, 9011, True),
 }
+
+# The phase-room regression needs an unobstructed, repeatable route through the
+# actual doorway.  Generic scenery is intentionally omitted from the approach
+# and both local phase-room cells; the rest of TESTMAP remains densely dressed.
+# This is a fixture authoring invariant, not an engine-side coordinate rule.
+PHASE_CLEAR_CELLS = frozenset({(1, 3), (1, 4), (1, 5)})
+# Isolating the Phase Room removes one formerly dressed Atrium cell. Keep the
+# rest of this systems fixture at its established decoration-density budget,
+# well away from the phase-room route.
+EXTRA_DECORATION_CELLS = frozenset({(3, 3)})
 
 
 def block(kind, values):
@@ -241,17 +253,17 @@ def make_geometry():
                     linedef["sidefront"], linedef["sideback"] = linedef["sideback"], linedef["sidefront"]
                 linedef.update({
                     "id": phase_portal["id"],
-                    "special": PORTAL_SPECIAL,
-                    "arg0": phase_portal["destination"],
-                    "arg1": 0,
-                    "arg2": PORTAL_TYPE_TELEPORT,
-                    "arg3": 0,
-                    "arg4": 0,
                     "user_sol_phase_role": phase_portal["role"],
                     "user_sol_phase_group": phase_portal["group"],
                 })
                 if phase_portal["role"] == "source":
                     linedef.update({
+                        "special": PORTAL_SPECIAL,
+                        "arg0": phase_portal["destination"],
+                        "arg1": 0,
+                        "arg2": PORTAL_TYPE_TELEPORT,
+                        "arg3": 0,
+                        "arg4": 0,
                         "user_sol_phase_inside_side": phase_portal["inside_side"],
                         "user_sol_phase_arm_depth": phase_portal["arm_depth"],
                         "user_sol_phase_entry_dot": phase_portal["entry_dot"],
@@ -341,12 +353,18 @@ def make_things(ordered_cells):
 
     decoration_count = 0
     for index, (gx, gy) in enumerate(ordered_cells):
+        if (gx, gy) in PHASE_CLEAR_CELLS:
+            continue
+
         decoration_types = (
             2035,
             DECORATION_TYPES[(index + 3) % len(DECORATION_TYPES)],
             DECORATION_TYPES[(index + 8) % len(DECORATION_TYPES)],
         )
         decoration_positions = ((96, 416), (416, 96), (416, 416))
+        if (gx, gy) in EXTRA_DECORATION_CELLS:
+            decoration_types += (44, 45, 46)
+            decoration_positions += ((96, 256), (256, 96), (416, 256))
 
         for slot, thing_type in enumerate(decoration_types):
             dx, dy = decoration_positions[slot]

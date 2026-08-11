@@ -1,10 +1,10 @@
 SOL! v0.4.0 engine-contract testbed
 Map: E1M1 — TESTMAP
 Format: UDMF
-Rooms: 13 / 43 connected sectors
+Rooms: 13 / 42 connected sectors
 Monsters: none
 Impossible space: 1 SOL phase source + destination anchor; 1 reciprocal linked-portal lab / geometry contract 1
-Decorations: 129 stock objects for lighting and ambience coverage
+Decorations: 120 stock objects outside the clear phase-route corridor
 Weapons: shotgun, chaingun, chainsaw, rocket launcher, plasma rifle, BFG
 Wadpack contract: 3 / 18 active resources / 20 logical slots
 Bundle contract: 2 / sol.pk3 / runtime slot 21 / content slot 22

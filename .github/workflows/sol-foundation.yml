@@ -139,12 +139,12 @@ jobs:
           assert stats['title'] == 'TESTMAP'
           assert stats['geometry_contract'] == 1
           assert stats['rooms'] == 13
-          assert stats['sectors'] == 43
+          assert stats['sectors'] == 42
           assert stats['monsters'] == 0
           assert stats['linked_portals'] == 2
           assert stats['phase_portal_sources'] == 1
           assert stats['phase_portal_anchors'] == 1
-          assert stats['decorations'] == 129
+          assert stats['decorations'] == 120
           assert stats['weapons'] == 6
           PY
       - name: Verify pinned DoomTools revision

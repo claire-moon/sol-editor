@@ -28,7 +28,8 @@ Engine milestones are:
 1. `v0.3.0`: SOL identity, separate user state, Doom IWAD discovery, and native
    mandatory `sol.pk3` mounting.
 2. `v0.4.0`: engine-owned wadpack/bundle tooling, wadpack contract 3, bundle
-   contract 2, and canonical SOL defaults.
+   contract 2, canonical SOL defaults, and geometry contract 1's phase-portal
+   impossible-room fixture plus conventional linked-portal lab.
 3. `v0.5.0`: SOL title/options/pause UI, centered 4:3 presentation, fixed 8000 Hz
    default, exact Classic/Modern framerate option, and WW Alpha HUD wrapper.
 4. `v0.6.0`: four-Chapter lifecycle, in-memory runs, Soulsphere extra life,
@@ -47,11 +48,13 @@ provenance moves to `sol-engine`. The editor consumes the resulting contracts
 and continues placing its temporary playtest map after `sol.pk3` so test content
 retains precedence.
 
-The generated E1M1 fixture is expanded in v0.4 into a deterministic systems
-testbed with multiple connected rooms, stock placeholder materials, varied
-lighting, all major Doom weapons, varied monster arrangements, and dense stock
-objects. It exists to exercise ReLite, Universal Ambience, renderer/resource
-loading, and authoring integration; it is not production level design.
+The generated E1M1 fixture is expanded in v0.4 into a deterministic,
+monster-free systems testbed with multiple connected rooms, stock placeholder
+materials, varied lighting, all major Doom weapons, dense stock objects outside
+the deliberately clear phase-room route, a stateful phase-room doorway, and a
+separate conventional linked-portal lab. It exists to exercise ReLite, Universal
+Ambience, renderer/resource loading, and authoring integration; it is not
+production level design.
 
 ## `v0.13.0`: palette and voxel toolchain
 

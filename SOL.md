@@ -78,7 +78,7 @@ asset has documented redistribution permission.
 
 `tools/sol-generate-e1m1.py` is the deterministic source of the test map. E1M1
 is presented to the player as `TESTMAP`. The v0.4 fixture contains thirteen
-functional room themes represented by 43 connected sectors across a
+functional room themes represented by 42 connected sectors across a
 two-dimensional layout rather than a linear strip.
 
 Coverage includes:
@@ -92,8 +92,9 @@ Coverage includes:
   independent reciprocal 9011/9012 linked-portal laboratory;
 - shotgun, chaingun, chainsaw, rocket launcher, plasma rifle, and BFG;
 - ammunition, health, armor, powerups, and multiplayer starts;
-- 129 stock barrels, torches/candelabras, corpses, and other decorations to
-  exercise ReLite and Universal Ambience behavior;
+- 120 stock barrels, torches/candelabras, corpses, and other decorations to
+  exercise ReLite and Universal Ambience behavior, while preserving a clear
+  local route through the phase doorway and its arm depth;
 - a normal player-use exit and connected-sector validation.
 
 Tracked `stats.json` and `layout.svg` must match deterministic generator output.
